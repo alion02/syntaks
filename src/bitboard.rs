@@ -1,0 +1,159 @@
+use crate::core::*;
+use std::ops::*;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
+pub struct Bitboard {
+    raw: u64,
+}
+
+impl Bitboard {
+    const MASK: u64 = (1 << Square::COUNT) - 1;
+
+    pub const fn empty() -> Self {
+        Self { raw: 0 }
+    }
+
+    pub const fn from_raw(raw: u64) -> Self {
+        Self {
+            raw: raw & Self::MASK,
+        }
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.raw == 0
+    }
+
+    pub const fn has_sq(self, sq: Square) -> bool {
+        (self.raw & sq.bb().raw) != 0
+    }
+
+    pub const fn set_sq(self, sq: Square) -> Self {
+        Self {
+            raw: self.raw | sq.bb().raw,
+        }
+    }
+
+    pub const fn clear_sq(self, sq: Square) -> Self {
+        Self {
+            raw: self.raw & !sq.bb().raw,
+        }
+    }
+
+    pub const fn toggle_sq(self, sq: Square) -> Self {
+        Self {
+            raw: self.raw ^ sq.bb().raw,
+        }
+    }
+
+    pub const fn cmpl(self) -> Self {
+        Self { raw: !self.raw }
+    }
+
+    pub const fn and(self, other: Self) -> Self {
+        Self {
+            raw: self.raw & other.raw,
+        }
+    }
+
+    pub const fn or(self, other: Self) -> Self {
+        Self {
+            raw: self.raw | other.raw,
+        }
+    }
+
+    pub const fn xor(self, other: Self) -> Self {
+        Self {
+            raw: self.raw ^ other.raw,
+        }
+    }
+
+    pub const fn shr(self, count: u32) -> Self {
+        Self {
+            raw: self.raw >> count,
+        }
+    }
+
+    pub const fn shl(self, count: u32) -> Self {
+        Self {
+            raw: (self.raw << count) & Self::MASK,
+        }
+    }
+}
+
+impl Not for Bitboard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        self.cmpl()
+    }
+}
+
+impl BitAnd for Bitboard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        self.and(rhs)
+    }
+}
+
+impl BitOr for Bitboard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        self.or(rhs)
+    }
+}
+
+impl BitXor for Bitboard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        self.xor(rhs)
+    }
+}
+
+impl Shr<u32> for Bitboard {
+    type Output = Bitboard;
+
+    fn shr(self, rhs: u32) -> Self::Output {
+        self.shr(rhs)
+    }
+}
+
+impl Shl<u32> for Bitboard {
+    type Output = Bitboard;
+
+    fn shl(self, rhs: u32) -> Self::Output {
+        self.shl(rhs)
+    }
+}
+
+impl BitAndAssign for Bitboard {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs
+    }
+}
+
+impl BitOrAssign for Bitboard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs
+    }
+}
+
+impl BitXorAssign for Bitboard {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs
+    }
+}
+
+impl ShrAssign<u32> for Bitboard {
+    fn shr_assign(&mut self, rhs: u32) {
+        *self = *self >> rhs;
+    }
+}
+
+impl ShlAssign<u32> for Bitboard {
+    fn shl_assign(&mut self, rhs: u32) {
+        *self = *self << rhs;
+    }
+}

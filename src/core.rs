@@ -1,0 +1,178 @@
+use crate::bitboard::Bitboard;
+use std::ops::{Index, IndexMut};
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(u8)]
+pub enum Player {
+    P1,
+    P2,
+}
+
+impl Player {
+    pub const COUNT: usize = 2;
+
+    pub const fn from_raw(raw: u8) -> Option<Self> {
+        match raw {
+            0 => Some(Self::P1),
+            1 => Some(Self::P2),
+            _ => None,
+        }
+    }
+
+    pub const fn raw(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
+
+    pub const fn flip(self) -> Self {
+        Self::from_raw(self as u8 ^ 0x1).unwrap()
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(u8)]
+pub enum PieceType {
+    Flat,
+    Wall,
+    Capstone,
+}
+
+impl PieceType {
+    pub const COUNT: usize = 3;
+
+    pub const fn from_raw(raw: u8) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Flat),
+            1 => Some(Self::Wall),
+            2 => Some(Self::Capstone),
+            _ => None,
+        }
+    }
+
+    pub const fn raw(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
+
+    pub const fn with_player(self, player: Player) -> Piece {
+        Piece::from_raw((self.raw() << 1) | player.raw()).unwrap()
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(u8)]
+pub enum Piece {
+    P1Flat,
+    P2Flat,
+    P1Wall,
+    P2Wall,
+    P1Capstone,
+    P2Capstone,
+}
+
+impl Piece {
+    pub const COUNT: usize = 6;
+
+    pub const fn from_raw(raw: u8) -> Option<Self> {
+        match raw {
+            0 => Some(Self::P1Flat),
+            1 => Some(Self::P2Flat),
+            2 => Some(Self::P1Wall),
+            3 => Some(Self::P2Wall),
+            4 => Some(Self::P1Capstone),
+            5 => Some(Self::P2Capstone),
+            _ => None,
+        }
+    }
+
+    pub const fn raw(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
+
+    pub const fn player(self) -> Player {
+        Player::from_raw(self.raw() & 0x1).unwrap()
+    }
+
+    pub const fn piece_type(self) -> PieceType {
+        PieceType::from_raw(self.raw() >> 1).unwrap()
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(u8)]
+#[rustfmt::skip]
+pub enum Square {
+    A1, B1, C1, D1, E1, F1,
+    A2, B2, C2, D2, E2, F2,
+    A3, B3, C3, D3, E3, F3,
+    A4, B4, C4, D4, E4, F4,
+    A5, B5, C5, D5, E5, F5,
+    A6, B6, C6, D6, E6, F6,
+}
+
+impl Square {
+    pub const COUNT: usize = 36;
+
+    pub const fn from_raw(raw: u8) -> Option<Self> {
+        if (raw as usize) < Self::COUNT {
+            // SAFETY: we just bounds checked the value
+            Some(unsafe { std::mem::transmute::<u8, Square>(raw) })
+        } else {
+            None
+        }
+    }
+
+    pub const fn from_file_rank(file: u32, rank: u32) -> Option<Self> {
+        if file >= 6 || rank >= 6 {
+            None
+        } else {
+            Some(Self::from_raw((rank as u8 * 6) + file as u8).unwrap())
+        }
+    }
+
+    pub const fn raw(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
+
+    pub const fn rank(self) -> u32 {
+        self.raw() as u32 / 6
+    }
+
+    pub const fn file(self) -> u32 {
+        self.raw() as u32 % 6
+    }
+
+    pub const fn bb(self) -> Bitboard {
+        Bitboard::from_raw(1 << self.idx())
+    }
+}
+
+impl<T> Index<Square> for [T; Square::COUNT] {
+    type Output = T;
+
+    fn index(&self, index: Square) -> &Self::Output {
+        // SAFETY: all values of Square are necessarily in bounds
+        unsafe { self.get_unchecked(index.idx()) }
+    }
+}
+
+impl<T> IndexMut<Square> for [T; Square::COUNT] {
+    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+        // SAFETY: all values of Square are necessarily in bounds
+        unsafe { self.get_unchecked_mut(index.idx()) }
+    }
+}

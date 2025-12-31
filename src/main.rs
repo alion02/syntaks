@@ -1,3 +1,10 @@
+use crate::board::Position;
+
+mod bitboard;
+mod board;
+mod core;
+mod takmove;
+
 fn main() {
-    println!("Hello, world!");
+    println!("{}", Position::startpos().tps());
 }
