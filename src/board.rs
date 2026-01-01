@@ -1,6 +1,7 @@
 use crate::bitboard::Bitboard;
 use crate::core::*;
 use crate::takmove::Move;
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Stacks {
@@ -31,6 +32,10 @@ impl Stacks {
 
     pub fn height(&self, sq: Square) -> u8 {
         self.heights[sq.idx()]
+    }
+
+    pub fn players(&self, sq: Square) -> u64 {
+        self.players[sq.idx()]
     }
 
     fn push(&mut self, sq: Square, pt: PieceType, player: Player) {
@@ -250,8 +255,8 @@ impl Position {
             new_pos.pieces[mv.pt().idx()].set_sq(mv.sq());
 
             match mv.pt() {
-                PieceType::Capstone => new_pos.caps_in_hand[self.stm().idx()] -= 1,
-                _ => new_pos.flats_in_hand[self.stm().idx()] -= 1,
+                PieceType::Capstone => new_pos.caps_in_hand[dropped_player.idx()] -= 1,
+                _ => new_pos.flats_in_hand[dropped_player.idx()] -= 1,
             }
         }
 
@@ -326,5 +331,151 @@ impl Position {
         tps.push_str(&format!(" {}", self.ply() / 2 + 1));
 
         tps
+    }
+
+    fn regen(&mut self) {
+        self.players.fill(Bitboard::empty());
+        self.pieces.fill(Bitboard::empty());
+
+        self.flats_in_hand.fill(30);
+        self.caps_in_hand.fill(1);
+
+        for sq_idx in 0..Square::COUNT {
+            let sq = Square::from_raw(sq_idx as u8).unwrap();
+
+            if self.stacks.is_empty(sq) {
+                continue;
+            }
+
+            let player = self.stacks.top_player(sq).unwrap();
+            let top = self.stacks.top(sq).unwrap();
+
+            self.players[player.idx()].set_sq(sq);
+            self.pieces[top.idx()].set_sq(sq);
+
+            if top == PieceType::Capstone {
+                self.caps_in_hand[player.idx()] -= 1;
+            } else {
+                self.flats_in_hand[player.idx()] -= 1;
+            }
+
+            let players = self.stacks.players(sq);
+            let covered = (1 << (self.stacks.height(sq) - 1)) - 1;
+
+            self.flats_in_hand[0] -= (!players & covered).count_ones() as u8;
+            self.flats_in_hand[1] -= (players & covered).count_ones() as u8;
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum TpsError {
+    WrongNumberOfParts,
+    WrongNumberOfRanks,
+    BlankFile,
+    InvalidEmptyFileCount,
+    InvalidCharInStack,
+    ExcessCharsAfterStackTop,
+    WrongNumberOfFiles,
+    InvalidStm,
+    InvalidFullmove,
+}
+
+impl FromStr for Position {
+    type Err = TpsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split_ascii_whitespace().collect();
+        if parts.len() != 3 {
+            return Err(TpsError::WrongNumberOfParts);
+        }
+
+        let ranks: Vec<&str> = parts[0].split('/').collect();
+        if ranks.len() != 6 {
+            return Err(TpsError::WrongNumberOfRanks);
+        }
+
+        let mut pos = Self::startpos();
+
+        for rank_idx in 0..6 {
+            let mut file_idx = 0;
+
+            for stack in ranks[5 - rank_idx as usize].split(',') {
+                if file_idx >= 6 {
+                    return Err(TpsError::WrongNumberOfFiles);
+                }
+
+                if stack.is_empty() {
+                    return Err(TpsError::BlankFile);
+                }
+
+                let mut chars = stack.chars();
+
+                if chars.next().unwrap() == 'x' {
+                    let remaining = chars.as_str();
+                    if !remaining.is_empty() {
+                        match remaining.parse::<u32>() {
+                            Ok(empty) => file_idx += empty,
+                            Err(_) => return Err(TpsError::InvalidEmptyFileCount),
+                        }
+                    } else {
+                        file_idx += 1;
+                    }
+                } else {
+                    let sq = Square::from_file_rank(file_idx, rank_idx).unwrap();
+
+                    let mut players = Vec::with_capacity(stack.len());
+                    let mut top = None;
+
+                    for c in stack.chars() {
+                        if top.is_some() {
+                            return Err(TpsError::ExcessCharsAfterStackTop);
+                        }
+
+                        match c {
+                            '1' => players.push(Player::P1),
+                            '2' => players.push(Player::P2),
+                            'F' => top = Some(PieceType::Flat), // nonstandard but why not
+                            'S' => top = Some(PieceType::Wall),
+                            'C' => top = Some(PieceType::Capstone),
+                            _ => return Err(TpsError::InvalidCharInStack),
+                        }
+                    }
+
+                    let top = top.unwrap_or(PieceType::Flat);
+
+                    for (idx, &player) in players.iter().enumerate() {
+                        if idx == players.len() - 1 {
+                            pos.stacks.push(sq, top, player);
+                        } else {
+                            pos.stacks.push(sq, PieceType::Flat, player);
+                        }
+                    }
+
+                    file_idx += 1;
+                }
+            }
+
+            if file_idx > 6 {
+                return Err(TpsError::WrongNumberOfFiles);
+            }
+        }
+
+        match parts[1] {
+            "1" => pos.stm = Player::P1,
+            "2" => pos.stm = Player::P2,
+            _ => return Err(TpsError::InvalidStm),
+        }
+
+        match parts[2].parse::<u16>() {
+            Ok(fullmove) => {
+                pos.ply = (fullmove.max(1) - 1) * 2 + if pos.stm == Player::P2 { 1 } else { 0 }
+            }
+            Err(_) => return Err(TpsError::InvalidFullmove),
+        }
+
+        pos.regen();
+
+        Ok(pos)
     }
 }
