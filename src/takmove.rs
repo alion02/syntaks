@@ -53,7 +53,7 @@ impl Move {
     pub const fn placement(pt: PieceType, dst: Square) -> Self {
         let mut raw = 0;
 
-        raw |= (pt.raw() as u16 + 1) << Self::FLAG_BITS;
+        raw |= (pt.raw() as u16 + 1) << Self::FLAG_SHIFT;
         raw |= dst.raw() as u16;
 
         Self {
@@ -89,7 +89,7 @@ impl Move {
         self.pattern() != 0
     }
 
-    pub const fn piece_type(self) -> PieceType {
+    pub const fn pt(self) -> PieceType {
         assert!(!self.is_spread());
         PieceType::from_raw((((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) - 1) as u8)
             .unwrap()
