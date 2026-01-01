@@ -9,70 +9,95 @@ pub struct Bitboard {
 impl Bitboard {
     const MASK: u64 = (1 << Square::COUNT) - 1;
 
+    #[must_use]
     pub const fn empty() -> Self {
         Self { raw: 0 }
     }
 
+    #[must_use]
     pub const fn from_raw(raw: u64) -> Self {
         Self {
             raw: raw & Self::MASK,
         }
     }
 
+    #[must_use]
     pub const fn is_empty(self) -> bool {
         self.raw == 0
     }
 
+    #[must_use]
     pub const fn has_sq(self, sq: Square) -> bool {
         (self.raw & sq.bb().raw) != 0
     }
 
-    pub const fn set_sq(self, sq: Square) -> Self {
+    #[must_use]
+    pub const fn with_sq(self, sq: Square) -> Self {
         Self {
             raw: self.raw | sq.bb().raw,
         }
     }
 
-    pub const fn clear_sq(self, sq: Square) -> Self {
+    #[must_use]
+    pub const fn without_sq(self, sq: Square) -> Self {
         Self {
             raw: self.raw & !sq.bb().raw,
         }
     }
 
-    pub const fn toggle_sq(self, sq: Square) -> Self {
+    #[must_use]
+    pub const fn with_sq_toggled(self, sq: Square) -> Self {
         Self {
             raw: self.raw ^ sq.bb().raw,
         }
     }
 
+    pub const fn set_sq(&mut self, sq: Square) {
+        self.raw |= sq.bb().raw;
+    }
+
+    pub const fn clear_sq(&mut self, sq: Square) {
+        self.raw &= !sq.bb().raw;
+    }
+
+    pub const fn toggle_sq(&mut self, sq: Square) {
+        self.raw ^= sq.bb().raw;
+    }
+
+    #[must_use]
     pub const fn cmpl(self) -> Self {
         Self { raw: !self.raw }
     }
 
+    #[must_use]
     pub const fn and(self, other: Self) -> Self {
         Self {
             raw: self.raw & other.raw,
         }
     }
 
+    #[must_use]
     pub const fn or(self, other: Self) -> Self {
         Self {
             raw: self.raw | other.raw,
         }
     }
 
+    #[must_use]
     pub const fn xor(self, other: Self) -> Self {
         Self {
             raw: self.raw ^ other.raw,
         }
     }
 
+    #[must_use]
     pub const fn shr(self, count: u32) -> Self {
         Self {
             raw: self.raw >> count,
         }
     }
 
+    #[must_use]
     pub const fn shl(self, count: u32) -> Self {
         Self {
             raw: (self.raw << count) & Self::MASK,

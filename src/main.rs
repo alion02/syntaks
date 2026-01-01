@@ -14,6 +14,7 @@ fn main() {
     let pos = pos.apply_move(Move::placement(PieceType::Flat, Square::B1));
     let pos = pos.apply_move(Move::placement(PieceType::Wall, Square::C1));
     let pos = pos.apply_move(Move::placement(PieceType::Capstone, Square::D1));
+    let pos = pos.apply_move(Move::spread(Square::C1, Direction::Up, 0b100000));
 
     println!("{}", pos.tps());
 }

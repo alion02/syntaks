@@ -11,6 +11,7 @@ pub enum Player {
 impl Player {
     pub const COUNT: usize = 2;
 
+    #[must_use]
     pub const fn from_raw(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::P1),
@@ -19,14 +20,17 @@ impl Player {
         }
     }
 
+    #[must_use]
     pub const fn raw(self) -> u8 {
         self as u8
     }
 
+    #[must_use]
     pub const fn idx(self) -> usize {
         self as usize
     }
 
+    #[must_use]
     pub const fn flip(self) -> Self {
         Self::from_raw(self as u8 ^ 0x1).unwrap()
     }
@@ -52,14 +56,17 @@ impl PieceType {
         }
     }
 
+    #[must_use]
     pub const fn raw(self) -> u8 {
         self as u8
     }
 
+    #[must_use]
     pub const fn idx(self) -> usize {
         self as usize
     }
 
+    #[must_use]
     pub const fn with_player(self, player: Player) -> Piece {
         Piece::from_raw((self.raw() << 1) | player.raw()).unwrap()
     }
@@ -91,20 +98,62 @@ impl Piece {
         }
     }
 
+    #[must_use]
     pub const fn raw(self) -> u8 {
         self as u8
     }
 
+    #[must_use]
     pub const fn idx(self) -> usize {
         self as usize
     }
 
+    #[must_use]
     pub const fn player(self) -> Player {
         Player::from_raw(self.raw() & 0x1).unwrap()
     }
 
+    #[must_use]
     pub const fn piece_type(self) -> PieceType {
         PieceType::from_raw(self.raw() >> 1).unwrap()
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[repr(u8)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Direction {
+    pub const COUNT: usize = 4;
+
+    pub const fn from_raw(raw: u8) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Up),
+            1 => Some(Self::Down),
+            2 => Some(Self::Left),
+            3 => Some(Self::Right),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub const fn raw(self) -> u8 {
+        self as u8
+    }
+
+    #[must_use]
+    pub const fn idx(self) -> usize {
+        self as usize
+    }
+
+    #[must_use]
+    pub const fn offset(self) -> i8 {
+        [6, -6, -1, 1][self.idx()]
     }
 }
 
@@ -123,6 +172,7 @@ pub enum Square {
 impl Square {
     pub const COUNT: usize = 36;
 
+    #[must_use]
     pub const fn from_raw(raw: u8) -> Option<Self> {
         if (raw as usize) < Self::COUNT {
             // SAFETY: we just bounds checked the value
@@ -132,6 +182,7 @@ impl Square {
         }
     }
 
+    #[must_use]
     pub const fn from_file_rank(file: u32, rank: u32) -> Option<Self> {
         if file >= 6 || rank >= 6 {
             None
@@ -140,24 +191,39 @@ impl Square {
         }
     }
 
+    #[must_use]
     pub const fn raw(self) -> u8 {
         self as u8
     }
 
+    #[must_use]
     pub const fn idx(self) -> usize {
         self as usize
     }
 
+    #[must_use]
     pub const fn rank(self) -> u32 {
         self.raw() as u32 / 6
     }
 
+    #[must_use]
     pub const fn file(self) -> u32 {
         self.raw() as u32 % 6
     }
 
+    #[must_use]
     pub const fn bb(self) -> Bitboard {
         Bitboard::from_raw(1 << self.idx())
+    }
+
+    #[must_use]
+    pub const fn shift(self, dir: Direction) -> Option<Self> {
+        let shifted = self as i8 + dir.offset();
+        if shifted >= 0 && shifted < Self::COUNT as i8 {
+            Some(Self::from_raw(shifted as u8).unwrap())
+        } else {
+            None
+        }
     }
 }
 

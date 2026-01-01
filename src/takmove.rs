@@ -1,36 +1,5 @@
 use crate::core::*;
-use std::num::{NonZero, NonZeroU16};
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[repr(u8)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl Direction {
-    pub const COUNT: usize = 4;
-
-    pub const fn from_raw(raw: u8) -> Option<Self> {
-        match raw {
-            0 => Some(Self::Up),
-            1 => Some(Self::Down),
-            2 => Some(Self::Left),
-            3 => Some(Self::Right),
-            _ => None,
-        }
-    }
-
-    pub const fn raw(self) -> u8 {
-        self as u8
-    }
-
-    pub const fn idx(self) -> usize {
-        self as usize
-    }
-}
+use std::num::NonZeroU16;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Move {
@@ -50,6 +19,7 @@ impl Move {
     const PATTERN_MASK: u16 = (1 << Self::PATTERN_BITS) - 1;
     const FLAG_MASK: u16 = (1 << Self::FLAG_BITS) - 1;
 
+    #[must_use]
     pub const fn placement(pt: PieceType, dst: Square) -> Self {
         let mut raw = 0;
 
@@ -61,6 +31,7 @@ impl Move {
         }
     }
 
+    #[must_use]
     pub const fn spread(src: Square, dir: Direction, pattern: u16) -> Self {
         assert!(pattern != 0);
         assert!((pattern & !Self::PATTERN_MASK) == 0);
@@ -76,28 +47,32 @@ impl Move {
         }
     }
 
+    #[must_use]
     pub const fn sq(self) -> Square {
         Square::from_raw((((self.raw.get()) >> Self::SQUARE_SHIFT) & Self::SQUARE_MASK) as u8)
             .unwrap()
     }
 
+    #[must_use]
     pub const fn pattern(self) -> u16 {
         (self.raw.get() >> Self::PATTERN_SHIFT) & Self::PATTERN_MASK
     }
 
+    #[must_use]
     pub const fn is_spread(self) -> bool {
         self.pattern() != 0
     }
 
+    #[must_use]
     pub const fn pt(self) -> PieceType {
         assert!(!self.is_spread());
         PieceType::from_raw((((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) - 1) as u8)
             .unwrap()
     }
 
-    pub const fn direction(self) -> Direction {
+    #[must_use]
+    pub const fn dir(self) -> Direction {
         assert!(self.is_spread());
-        Direction::from_raw((((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) - 1) as u8)
-            .unwrap()
+        Direction::from_raw(((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) as u8).unwrap()
     }
 }
