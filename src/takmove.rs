@@ -2,6 +2,7 @@ use crate::board::Position;
 use crate::core::*;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU16;
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Move {
@@ -123,5 +124,115 @@ impl Display for Move {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum MoveStrError {
+    NonAsciiString,
+    TooShort,
+    MissingSquare,
+    InvalidSquare(SquareStrError),
+    InvalidDirection,
+    TooManySpreadSteps,
+    InvalidSpreadPattern,
+    TooManySpreadPieces,
+}
+
+impl FromStr for Move {
+    type Err = MoveStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.is_ascii() {
+            return Err(MoveStrError::NonAsciiString);
+        }
+
+        if s.len() < 2 {
+            return Err(MoveStrError::TooShort);
+        }
+
+        let bytes = s.as_bytes();
+
+        let mut pt = None;
+        let mut taken = None;
+
+        let mut next = 0;
+
+        match bytes[0] {
+            b'F' => {
+                pt = Some(PieceType::Flat);
+                next += 1;
+            }
+            b'S' => {
+                pt = Some(PieceType::Wall);
+                next += 1;
+            }
+            b'C' => {
+                pt = Some(PieceType::Capstone);
+                next += 1;
+            }
+            b'1'..=b'9' => {
+                taken = Some(bytes[0] - b'0');
+                next += 1;
+            }
+            _ => {}
+        }
+
+        if (s.len() - next) < 2 {
+            return Err(MoveStrError::MissingSquare);
+        }
+
+        let sq = match s[next..(next + 2)].parse() {
+            Ok(sq) => sq,
+            Err(err) => return Err(MoveStrError::InvalidSquare(err)),
+        };
+
+        next += 2;
+
+        if next == s.len() {
+            let pt = pt.unwrap_or(PieceType::Flat);
+            return Ok(Self::placement(pt, sq));
+        }
+
+        let dir = match bytes[next] {
+            b'+' => Direction::Up,
+            b'-' => Direction::Down,
+            b'<' => Direction::Left,
+            b'>' => Direction::Right,
+            _ => return Err(MoveStrError::InvalidDirection),
+        };
+
+        next += 1;
+
+        let taken = taken.unwrap_or(1);
+        let bytes = bytes.strip_suffix(b"*").unwrap_or(bytes);
+
+        if (s.len() - next) > 6 {
+            return Err(MoveStrError::TooManySpreadSteps);
+        }
+
+        let mut pattern = 1;
+        let mut bit = 1;
+
+        for &pattern_char in &bytes[next..] {
+            if !(b'1'..=b'6').contains(&pattern_char) {
+                return Err(MoveStrError::InvalidSpreadPattern);
+            }
+
+            let dropped = pattern_char - b'0';
+
+            bit <<= dropped;
+            pattern |= bit;
+        }
+
+        pattern <<= Position::CARRY_LIMIT - taken;
+
+        if (pattern & !((1 << (Position::CARRY_LIMIT + 1)) - 1)) != 0 {
+            return Err(MoveStrError::TooManySpreadPieces);
+        }
+
+        pattern &= Self::PATTERN_MASK;
+
+        Ok(Self::spread(sq, dir, pattern))
     }
 }

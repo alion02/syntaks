@@ -1,5 +1,6 @@
 use crate::bitboard::Bitboard;
 use std::fmt::{Display, Formatter, Write};
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(u8)]
@@ -270,5 +271,41 @@ impl Display for Square {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_char((b'a' + self.file() as u8) as char)?;
         f.write_char((b'1' + self.rank() as u8) as char)
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum SquareStrError {
+    NonAsciiString,
+    WrongLength,
+    InvalidFile,
+    InvalidRank,
+}
+
+impl FromStr for Square {
+    type Err = SquareStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.is_ascii() {
+            return Err(SquareStrError::NonAsciiString);
+        }
+
+        let bytes = s.as_bytes();
+
+        if bytes.len() != 2 {
+            return Err(SquareStrError::WrongLength);
+        }
+
+        let file = bytes[0];
+        if !(b'a'..=b'f').contains(&file) {
+            return Err(SquareStrError::InvalidFile);
+        }
+
+        let rank = bytes[1];
+        if !(b'1'..=b'6').contains(&rank) {
+            return Err(SquareStrError::InvalidRank);
+        }
+
+        Ok(Self::from_file_rank((file - b'a') as u32, (rank - b'1') as u32).unwrap())
     }
 }

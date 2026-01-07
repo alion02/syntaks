@@ -18,6 +18,8 @@ fn do_perft(pos: &Position, depth: i32, movelists: &mut [Vec<Move>]) -> usize {
     let mut total = 0;
 
     for &mut mv in moves {
+        assert_eq!(mv, mv.to_string().parse().unwrap());
+
         let pos = pos.apply_move(mv);
         total += do_perft(&pos, depth - 1, movelists);
     }
@@ -25,6 +27,7 @@ fn do_perft(pos: &Position, depth: i32, movelists: &mut [Vec<Move>]) -> usize {
     total
 }
 
+#[must_use]
 pub fn perft(pos: &Position, depth: i32) -> usize {
     let mut movelists = vec![Vec::with_capacity(256); depth as usize];
     do_perft(pos, depth, &mut movelists)
@@ -43,6 +46,8 @@ pub fn split_perft(pos: &Position, depth: i32) {
     let mut total = 0;
 
     for &mut mv in moves {
+        assert_eq!(mv, mv.to_string().parse().unwrap());
+
         print!("{:9}  ", mv.to_string());
 
         let pos = pos.apply_move(mv);

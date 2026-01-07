@@ -138,6 +138,102 @@ impl Position {
         }
     }
 
+    pub fn from_tps_parts(parts: &[&str]) -> Result<Self, TpsError> {
+        if parts.len() < 2 || parts.len() > 3 {
+            return Err(TpsError::WrongNumberOfParts);
+        }
+
+        let ranks: Vec<&str> = parts[0].split('/').collect();
+        if ranks.len() != 6 {
+            return Err(TpsError::WrongNumberOfRanks);
+        }
+
+        let mut pos = Self::startpos();
+
+        for rank_idx in 0..6 {
+            let mut file_idx = 0;
+
+            for stack in ranks[5 - rank_idx as usize].split(',') {
+                if file_idx >= 6 {
+                    return Err(TpsError::WrongNumberOfFiles);
+                }
+
+                if stack.is_empty() {
+                    return Err(TpsError::BlankFile);
+                }
+
+                let mut chars = stack.chars();
+
+                if chars.next().unwrap() == 'x' {
+                    let remaining = chars.as_str();
+                    if !remaining.is_empty() {
+                        match remaining.parse::<u32>() {
+                            Ok(empty) => file_idx += empty,
+                            Err(_) => return Err(TpsError::InvalidEmptyFileCount),
+                        }
+                    } else {
+                        file_idx += 1;
+                    }
+                } else {
+                    let sq = Square::from_file_rank(file_idx, rank_idx).unwrap();
+
+                    let mut players = Vec::with_capacity(stack.len());
+                    let mut top = None;
+
+                    for c in stack.chars() {
+                        if top.is_some() {
+                            return Err(TpsError::ExcessCharsAfterStackTop);
+                        }
+
+                        match c {
+                            '1' => players.push(Player::P1),
+                            '2' => players.push(Player::P2),
+                            'F' => top = Some(PieceType::Flat), // nonstandard but why not
+                            'S' => top = Some(PieceType::Wall),
+                            'C' => top = Some(PieceType::Capstone),
+                            _ => return Err(TpsError::InvalidCharInStack),
+                        }
+                    }
+
+                    let top = top.unwrap_or(PieceType::Flat);
+
+                    for (idx, &player) in players.iter().enumerate() {
+                        if idx == players.len() - 1 {
+                            pos.stacks.push(sq, top, player);
+                        } else {
+                            pos.stacks.push(sq, PieceType::Flat, player);
+                        }
+                    }
+
+                    file_idx += 1;
+                }
+            }
+
+            if file_idx > 6 {
+                return Err(TpsError::WrongNumberOfFiles);
+            }
+        }
+
+        match parts[1] {
+            "1" => pos.stm = Player::P1,
+            "2" => pos.stm = Player::P2,
+            _ => return Err(TpsError::InvalidStm),
+        }
+
+        if parts.len() >= 3 {
+            match parts[2].parse::<u16>() {
+                Ok(fullmove) => {
+                    pos.ply = (fullmove.max(1) - 1) * 2 + if pos.stm == Player::P2 { 1 } else { 0 }
+                }
+                Err(_) => return Err(TpsError::InvalidFullmove),
+            }
+        }
+
+        pos.regen();
+
+        Ok(pos)
+    }
+
     #[must_use]
     pub fn stm(&self) -> Player {
         self.stm
@@ -419,96 +515,6 @@ impl FromStr for Position {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_ascii_whitespace().collect();
-        if parts.len() != 3 {
-            return Err(TpsError::WrongNumberOfParts);
-        }
-
-        let ranks: Vec<&str> = parts[0].split('/').collect();
-        if ranks.len() != 6 {
-            return Err(TpsError::WrongNumberOfRanks);
-        }
-
-        let mut pos = Self::startpos();
-
-        for rank_idx in 0..6 {
-            let mut file_idx = 0;
-
-            for stack in ranks[5 - rank_idx as usize].split(',') {
-                if file_idx >= 6 {
-                    return Err(TpsError::WrongNumberOfFiles);
-                }
-
-                if stack.is_empty() {
-                    return Err(TpsError::BlankFile);
-                }
-
-                let mut chars = stack.chars();
-
-                if chars.next().unwrap() == 'x' {
-                    let remaining = chars.as_str();
-                    if !remaining.is_empty() {
-                        match remaining.parse::<u32>() {
-                            Ok(empty) => file_idx += empty,
-                            Err(_) => return Err(TpsError::InvalidEmptyFileCount),
-                        }
-                    } else {
-                        file_idx += 1;
-                    }
-                } else {
-                    let sq = Square::from_file_rank(file_idx, rank_idx).unwrap();
-
-                    let mut players = Vec::with_capacity(stack.len());
-                    let mut top = None;
-
-                    for c in stack.chars() {
-                        if top.is_some() {
-                            return Err(TpsError::ExcessCharsAfterStackTop);
-                        }
-
-                        match c {
-                            '1' => players.push(Player::P1),
-                            '2' => players.push(Player::P2),
-                            'F' => top = Some(PieceType::Flat), // nonstandard but why not
-                            'S' => top = Some(PieceType::Wall),
-                            'C' => top = Some(PieceType::Capstone),
-                            _ => return Err(TpsError::InvalidCharInStack),
-                        }
-                    }
-
-                    let top = top.unwrap_or(PieceType::Flat);
-
-                    for (idx, &player) in players.iter().enumerate() {
-                        if idx == players.len() - 1 {
-                            pos.stacks.push(sq, top, player);
-                        } else {
-                            pos.stacks.push(sq, PieceType::Flat, player);
-                        }
-                    }
-
-                    file_idx += 1;
-                }
-            }
-
-            if file_idx > 6 {
-                return Err(TpsError::WrongNumberOfFiles);
-            }
-        }
-
-        match parts[1] {
-            "1" => pos.stm = Player::P1,
-            "2" => pos.stm = Player::P2,
-            _ => return Err(TpsError::InvalidStm),
-        }
-
-        match parts[2].parse::<u16>() {
-            Ok(fullmove) => {
-                pos.ply = (fullmove.max(1) - 1) * 2 + if pos.stm == Player::P2 { 1 } else { 0 }
-            }
-            Err(_) => return Err(TpsError::InvalidFullmove),
-        }
-
-        pos.regen();
-
-        Ok(pos)
+        Self::from_tps_parts(&parts)
     }
 }
