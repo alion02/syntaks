@@ -1,5 +1,6 @@
 use crate::bitboard::Bitboard;
 use crate::core::*;
+use crate::road::has_road;
 use crate::takmove::Move;
 use std::str::FromStr;
 
@@ -250,6 +251,11 @@ impl Position {
     }
 
     #[must_use]
+    pub fn piece_bb(&self, pt: PieceType) -> Bitboard {
+        self.pieces[pt.idx()]
+    }
+
+    #[must_use]
     pub fn occ(&self) -> Bitboard {
         self.players[0] | self.players[1]
     }
@@ -267,6 +273,13 @@ impl Position {
     #[must_use]
     pub fn ply(&self) -> u16 {
         self.ply
+    }
+
+    #[must_use]
+    pub fn has_road(&self, player: Player) -> bool {
+        let roads = (self.piece_bb(PieceType::Flat) | self.piece_bb(PieceType::Capstone))
+            & self.player_bb(player);
+        has_road(roads)
     }
 
     #[must_use]
