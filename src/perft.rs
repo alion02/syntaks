@@ -22,7 +22,7 @@
  */
 
 use crate::board::Position;
-use crate::movegen::generate_moves;
+use crate::movegen::generate_moves_into;
 use crate::takmove::Move;
 use std::time::Instant;
 
@@ -32,7 +32,7 @@ fn do_perft(pos: &Position, depth: i32, movelists: &mut [Vec<Move>]) -> usize {
     }
 
     let (moves, movelists) = movelists.split_first_mut().unwrap();
-    generate_moves(moves, pos);
+    generate_moves_into(moves, pos);
 
     if depth == 1 {
         return moves.len();
@@ -64,7 +64,7 @@ pub fn split_perft(pos: &Position, depth: i32) {
     let start = Instant::now();
 
     let (moves, movelists) = movelists.split_first_mut().unwrap();
-    generate_moves(moves, pos);
+    generate_moves_into(moves, pos);
 
     let mut total = 0;
 
