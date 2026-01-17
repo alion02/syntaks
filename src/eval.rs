@@ -25,7 +25,7 @@ use std::array;
 
 use crate::bitboard::Bitboard;
 use crate::board::Position;
-use crate::core::{Piece, Player};
+use crate::core::{Direction, Piece, Player};
 use crate::search::Score;
 
 #[static_init::dynamic]
@@ -75,17 +75,17 @@ pub fn static_eval(pos: &Position) -> Score {
     let p1_road_bb = pos.roads(Player::P1);
     let p2_road_bb = pos.roads(Player::P2);
 
-    let p1_adj_horz = p1_road_bb & p1_road_bb >> 1 & !Bitboard::RIGHT_EDGE;
-    let p2_adj_horz = p2_road_bb & p2_road_bb >> 1 & !Bitboard::RIGHT_EDGE;
+    let p1_adj_horz = p1_road_bb & p1_road_bb.shift(Direction::Left);
+    let p2_adj_horz = p2_road_bb & p2_road_bb.shift(Direction::Left);
 
-    let p1_adj_vert = p1_road_bb & p1_road_bb >> 6;
-    let p2_adj_vert = p2_road_bb & p2_road_bb >> 6;
+    let p1_adj_vert = p1_road_bb & p1_road_bb.shift(Direction::Down);
+    let p2_adj_vert = p2_road_bb & p2_road_bb.shift(Direction::Down);
 
-    let p1_line_horz = p1_adj_horz & p1_adj_horz >> 1 & !Bitboard::RIGHT_EDGE;
-    let p2_line_horz = p2_adj_horz & p2_adj_horz >> 1 & !Bitboard::RIGHT_EDGE;
+    let p1_line_horz = p1_adj_horz & p1_adj_horz.shift(Direction::Left);
+    let p2_line_horz = p2_adj_horz & p2_adj_horz.shift(Direction::Left);
 
-    let p1_line_vert = p1_adj_vert & p1_adj_vert >> 6;
-    let p2_line_vert = p2_adj_vert & p2_adj_vert >> 6;
+    let p1_line_vert = p1_adj_vert & p1_adj_vert.shift(Direction::Down);
+    let p2_line_vert = p2_adj_vert & p2_adj_vert.shift(Direction::Down);
 
     let p1_adj_value = (p1_adj_horz.popcount() + p1_adj_vert.popcount()) as i32;
     let p2_adj_value = (p2_adj_horz.popcount() + p2_adj_vert.popcount()) as i32;
