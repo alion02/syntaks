@@ -30,7 +30,8 @@ use crate::takmove::Move;
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum Stage {
     TtMove,
-    Killers,
+    Killer1,
+    Killer2,
     GenMoves,
     Moves,
     End,
@@ -40,12 +41,38 @@ impl Stage {
     fn next(&self) -> Self {
         assert_ne!(*self, Self::End);
         match *self {
-            Self::TtMove => Self::Killers,
-            Self::Killers => Self::GenMoves,
+            Self::TtMove => Self::Killer1,
+            Self::Killer1 => Self::Killer2,
+            Self::Killer2 => Self::GenMoves,
             Self::GenMoves => Self::Moves,
             Self::Moves => Self::End,
             Self::End => unreachable!(),
         }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct KillerTable {
+    killers: [Option<Move>; Self::COUNT],
+}
+
+impl KillerTable {
+    const COUNT: usize = 2;
+
+    pub fn push(&mut self, mv: Move) {
+        if self.killers[0] != Some(mv) {
+            self.killers[1] = self.killers[0];
+            self.killers[0] = Some(mv);
+        }
+    }
+
+    #[must_use]
+    pub fn contains(&self, mv: Move) -> bool {
+        self.killers.contains(&Some(mv))
+    }
+
+    pub fn reset(&mut self) {
+        *self = Default::default();
     }
 }
 
@@ -55,7 +82,7 @@ pub struct Movepicker<'a> {
     scores: &'a mut Vec<i32>,
     idx: usize,
     tt_move: Option<Move>,
-    killers: [Move; 2],
+    killers: KillerTable,
     stage: Stage,
 }
 
@@ -65,7 +92,7 @@ impl<'a> Movepicker<'a> {
         moves: &'a mut Vec<Move>,
         scores: &'a mut Vec<Score>,
         tt_move: Option<Move>,
-        killers: [Move; 2],
+        killers: KillerTable,
     ) -> Self {
         Self {
             pos,
@@ -115,17 +142,24 @@ impl<'a> Movepicker<'a> {
                         return Some(tt_move);
                     }
                 }
-                Stage::Killers => {
-                    while self.idx < self.killers.len() {
-                        let killer = self.killers[self.idx];
-                        self.idx += 1;
-                        if self.tt_move.is_none_or(|tt_move| killer != tt_move)
-                            && self.pos.is_legal(killer)
-                        {
-                            return Some(killer);
-                        }
+                Stage::Killer1 => {
+                    if let Some(killer) = self.killers.killers[0]
+                        && self.tt_move.is_none_or(|tt_move| killer != tt_move)
+                        && self.pos.is_legal(killer)
+                    {
+                        self.stage = self.stage.next();
+                        return Some(killer);
                     }
-                    self.idx = 0;
+                }
+                Stage::Killer2 => {
+                    if let Some(killer) = self.killers.killers[1]
+                        && self.tt_move.is_none_or(|tt_move| killer != tt_move)
+                        && killer != self.killers.killers[0].unwrap()
+                        && self.pos.is_legal(killer)
+                    {
+                        self.stage = self.stage.next();
+                        return Some(killer);
+                    }
                 }
                 Stage::GenMoves => {
                     generate_moves(self.moves, self.pos);
@@ -136,7 +170,7 @@ impl<'a> Movepicker<'a> {
                         let mv = self.pick_best();
                         self.idx += 1;
                         if self.tt_move.is_none_or(|tt_move| mv != tt_move)
-                            && !self.killers.contains(&mv)
+                            && !self.killers.contains(mv)
                         {
                             return Some(mv);
                         }

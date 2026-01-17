@@ -28,7 +28,7 @@ use crate::eval::static_eval;
 use crate::history::History;
 use crate::limit::Limits;
 use crate::movegen::generate_moves;
-use crate::movepick::Movepicker;
+use crate::movepick::{KillerTable, Movepicker};
 use crate::takmove::Move;
 use crate::ttable::{DEFAULT_TT_SIZE_MIB, TranspositionTable, TtFlag};
 use std::time::Instant;
@@ -114,7 +114,7 @@ struct ThreadData {
     root_moves: Vec<RootMove>,
     corrhist: CorrectionHistory,
     history: History,
-    killers: [[Move; 2]; MAX_PLY as usize],
+    killers: [KillerTable; MAX_PLY as usize],
 }
 
 impl ThreadData {
@@ -129,10 +129,7 @@ impl ThreadData {
             root_moves: Vec::with_capacity(1024),
             corrhist: CorrectionHistory::new(),
             history: History::new(),
-            killers: [[
-                Move::placement(PieceType::Flat, Square::C3),
-                Move::placement(PieceType::Flat, Square::D4),
-            ]; _],
+            killers: [Default::default(); MAX_PLY as usize],
         }
     }
 
@@ -592,11 +589,8 @@ impl SearcherImpl {
                 thread.history.update(pos, mv, -bonus);
             }
 
-            if alpha >= beta {
-                let killers = &mut thread.killers[ply as usize];
-                if best_move != killers[0] {
-                    *killers = [best_move, killers[0]];
-                }
+            if best_score >= beta {
+                thread.killers[ply as usize].push(best_move);
             }
         }
 
@@ -694,6 +688,7 @@ impl Searcher {
         self.searcher.reset();
         self.data.corrhist.clear();
         self.data.history.clear();
+        self.data.killers.fill(Default::default());
     }
 
     pub fn set_tt_size(&mut self, size_mib: usize) {
