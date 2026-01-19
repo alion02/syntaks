@@ -154,7 +154,6 @@ impl<'a> Movepicker<'a> {
                 Stage::Killer2 => {
                     if let Some(killer) = self.killers.killers[1]
                         && self.tt_move.is_none_or(|tt_move| killer != tt_move)
-                        && killer != self.killers.killers[0].unwrap()
                         && self.pos.is_legal(killer)
                     {
                         self.stage = self.stage.next();
