@@ -36,6 +36,8 @@ struct Keys {
     blockers: u64,
     roads: u64,
     tops: u64,
+    caps: u64,
+    walls: u64,
 }
 
 impl Keys {
@@ -51,6 +53,12 @@ impl Keys {
         }
         if pt.is_road() {
             self.roads ^= keys::top_key(pt, sq);
+        }
+        if pt == PieceType::Capstone {
+            self.caps ^= keys::top_key(pt, sq);
+        }
+        if pt == PieceType::Wall {
+            self.walls ^= keys::top_key(pt, sq);
         }
     }
 
@@ -411,6 +419,16 @@ impl Position {
     }
 
     #[must_use]
+    pub fn cap_key(&self) -> u64 {
+        self.stacks.keys.caps
+    }
+
+    #[must_use]
+    pub fn wall_key(&self) -> u64 {
+        self.stacks.keys.walls
+    }
+
+    #[must_use]
     pub fn all_blockers(&self) -> Bitboard {
         self.piece_bb(PieceType::Wall) | self.piece_bb(PieceType::Capstone)
     }
@@ -659,6 +677,18 @@ impl Position {
             other_new.regen();
             assert_eq!(new_pos, other_new);
         }
+
+        new_pos
+    }
+
+    #[must_use]
+    pub fn apply_nullmove(&self) -> Self {
+        let mut new_pos = *self;
+
+        new_pos.stm = new_pos.stm.flip();
+        new_pos.ply += 1;
+
+        new_pos.player_key ^= keys::p2_key();
 
         new_pos
     }

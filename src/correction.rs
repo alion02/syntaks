@@ -83,6 +83,8 @@ struct SidedTables {
     blocker: HashedTable,
     road: HashedTable,
     tops: HashedTable,
+    cap: HashedTable,
+    wall: HashedTable,
 }
 
 pub struct CorrectionHistory {
@@ -111,6 +113,8 @@ impl CorrectionHistory {
         tables.blocker[pos.blocker_key()].update(bonus);
         tables.road[pos.road_key()].update(bonus);
         tables.tops[pos.top_key()].update(bonus);
+        tables.cap[pos.cap_key()].update(bonus);
+        tables.wall[pos.wall_key()].update(bonus);
     }
 
     pub fn correction(&self, pos: &Position) -> i32 {
@@ -121,6 +125,8 @@ impl CorrectionHistory {
         correction += tables.blocker[pos.blocker_key()].get();
         correction += tables.road[pos.road_key()].get();
         correction += tables.tops[pos.top_key()].get();
+        correction += tables.cap[pos.cap_key()].get();
+        correction += tables.wall[pos.wall_key()].get();
 
         correction / 16
     }
