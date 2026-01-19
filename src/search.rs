@@ -22,12 +22,13 @@
  */
 
 use crate::board::{FlatCountOutcome, Position};
+use crate::core::{PieceType, Square};
 use crate::correction::CorrectionHistory;
 use crate::eval::static_eval;
 use crate::history::History;
 use crate::limit::Limits;
 use crate::movegen::generate_moves;
-use crate::movepick::Movepicker;
+use crate::movepick::{KillerTable, Movepicker};
 use crate::takmove::Move;
 use crate::ttable::{DEFAULT_TT_SIZE_MIB, TranspositionTable, TtFlag};
 use std::time::Instant;
@@ -119,6 +120,7 @@ struct ThreadData {
     stack: Vec<StackEntry>,
     corrhist: CorrectionHistory,
     history: History,
+    killers: [KillerTable; MAX_PLY as usize],
 }
 
 impl ThreadData {
@@ -134,6 +136,7 @@ impl ThreadData {
             stack: vec![StackEntry::default(); MAX_PLY as usize + 1],
             corrhist: CorrectionHistory::new(),
             history: History::new(),
+            killers: [Default::default(); MAX_PLY as usize],
         }
     }
 
@@ -451,7 +454,13 @@ impl SearcherImpl {
         let mut tt_flag = TtFlag::UpperBound;
 
         let mut scores = Vec::new();
-        let mut movepicker = Movepicker::new(pos, moves, &mut scores, tt_entry.mv);
+        let mut movepicker = Movepicker::new(
+            pos,
+            moves,
+            &mut scores,
+            tt_entry.mv,
+            thread.killers[ply as usize],
+        );
         let mut move_count = 0;
         let mut faillow_moves = arrayvec::ArrayVec::<Move, 32>::new();
 
@@ -623,6 +632,10 @@ impl SearcherImpl {
             for &mv in faillow_moves.iter() {
                 thread.history.update(pos, mv, -bonus);
             }
+
+            if best_score >= beta {
+                thread.killers[ply as usize].push(best_move);
+            }
         }
 
         if tt_flag == TtFlag::Exact
@@ -719,6 +732,7 @@ impl Searcher {
         self.searcher.reset();
         self.data.corrhist.clear();
         self.data.history.clear();
+        self.data.killers.fill(Default::default());
     }
 
     pub fn set_tt_size(&mut self, size_mib: usize) {
