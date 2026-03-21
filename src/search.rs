@@ -99,6 +99,23 @@ static LMR_REDUCTIONS: [[i32; LMR_TABLE_MOVES]; MAX_PLY as usize] = {
     reductions
 };
 
+#[derive(Clone)]
+struct PlyData {
+    movelist: Vec<Move>,
+    scores: Vec<i32>,
+    pv: PvList,
+}
+
+impl PlyData {
+    fn new() -> Self {
+        Self {
+            movelist: Vec::with_capacity(256),
+            scores: Vec::with_capacity(256),
+            pv: PvList::new(),
+        }
+    }
+}
+
 trait NodeType {
     const PV_NODE: bool;
     const ROOT_NODE: bool;
@@ -125,8 +142,7 @@ impl NodeType for RootNode {
 #[allow(clippy::too_many_arguments)]
 fn search<NT: NodeType>(
     thread: &mut ThreadData,
-    movelists: &mut [Vec<Move>],
-    pvs: &mut [PvList],
+    data_stack: &mut [PlyData],
     pos: &Position,
     depth: i32,
     ply: i32,
@@ -209,8 +225,7 @@ fn search<NT: NodeType>(
 
             let score = -search::<NonPvNode>(
                 thread,
-                movelists,
-                pvs,
+                data_stack,
                 &new_pos,
                 (depth - r).max(1), // dont allow dropping straight to eval
                 ply + 1,
@@ -227,28 +242,28 @@ fn search<NT: NodeType>(
         }
     }
 
-    let (moves, movelists) = movelists.split_first_mut().unwrap();
-    let (pv, child_pvs) = pvs.split_first_mut().unwrap();
+    let (data, child_data) = data_stack.split_first_mut().unwrap();
 
     let mut best_score = -SCORE_INF;
     let mut best_move = None;
 
     let mut tt_flag = TtFlag::UpperBound;
 
-    let mut scores = Vec::new();
     let prev_move = if ply > 0 {
         thread.stack[(ply - 1) as usize].mv
     } else {
         None
     };
+
     let mut movepicker = Movepicker::new(
         pos,
-        moves,
-        &mut scores,
+        &mut data.movelist,
+        &mut data.scores,
         tt_move,
         thread.killers[ply as usize],
         prev_move,
     );
+
     let mut move_count = 0;
     let mut faillow_moves = arrayvec::ArrayVec::<Move, 32>::new();
 
@@ -270,7 +285,7 @@ fn search<NT: NodeType>(
         move_count += 1;
 
         if NT::PV_NODE {
-            child_pvs[0].clear();
+            child_data[0].pv.clear();
         }
 
         let new_pos = thread.apply_move(ply, pos, mv);
@@ -331,8 +346,7 @@ fn search<NT: NodeType>(
 
                 score = -search::<NonPvNode>(
                     thread,
-                    movelists,
-                    child_pvs,
+                    child_data,
                     &new_pos,
                     reduced,
                     ply + 1,
@@ -344,8 +358,7 @@ fn search<NT: NodeType>(
                 if score > alpha && reduced < new_depth {
                     score = -search::<NonPvNode>(
                         thread,
-                        movelists,
-                        child_pvs,
+                        child_data,
                         &new_pos,
                         new_depth,
                         ply + 1,
@@ -357,8 +370,7 @@ fn search<NT: NodeType>(
             } else if !NT::PV_NODE || move_count > 1 {
                 score = -search::<NonPvNode>(
                     thread,
-                    movelists,
-                    child_pvs,
+                    child_data,
                     &new_pos,
                     new_depth,
                     ply + 1,
@@ -371,8 +383,7 @@ fn search<NT: NodeType>(
             if NT::PV_NODE && (move_count == 1 || score > alpha) {
                 score = -search::<PvNode>(
                     thread,
-                    movelists,
-                    child_pvs,
+                    child_data,
                     &new_pos,
                     new_depth,
                     ply + 1,
@@ -417,7 +428,7 @@ fn search<NT: NodeType>(
                     root_move.lower_bound = true;
                 }
 
-                update_pv(&mut root_move.pv, mv, &child_pvs[0]);
+                update_pv(&mut root_move.pv, mv, &child_data[0].pv);
             } else {
                 root_move.score = -SCORE_INF;
             }
@@ -432,7 +443,7 @@ fn search<NT: NodeType>(
             best_move = Some(mv);
 
             if NT::PV_NODE {
-                update_pv(pv, mv, &child_pvs[0]);
+                update_pv(&mut data.pv, mv, &child_data[0].pv);
             }
 
             tt_flag = TtFlag::Exact;
@@ -500,8 +511,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
 
     counter.register_thread();
 
-    let mut movelists = vec![Vec::with_capacity(256); MAX_PLY as usize];
-    let mut pvs = vec![PvList::new(); MAX_PLY as usize];
+    let mut data_stack = vec![PlyData::new(); MAX_PLY as usize * 2];
 
     thread.root_depth = 1;
 
@@ -528,8 +538,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
             while !thread.shared().has_stopped() {
                 let score = search::<RootNode>(
                     thread,
-                    &mut movelists,
-                    &mut pvs,
+                    &mut data_stack,
                     &ctx.root_pos,
                     thread.root_depth,
                     0,
