@@ -135,10 +135,7 @@ impl SharedContext {
     }
 
     pub fn check_stop_soft(&self, nodes: usize, best_move_nodes_fraction: f64) -> bool {
-        if self
-            .limits
-            .should_stop_soft(nodes, best_move_nodes_fraction)
-        {
+        if self.limits.should_stop_soft(nodes, best_move_nodes_fraction) {
             self.stopped.store(true, Ordering::Relaxed);
             return true;
         }

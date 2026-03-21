@@ -42,9 +42,7 @@ pub fn channel<M: Sync>(num_receivers: u32) -> (Sender<M>, impl Iterator<Item = 
         num_receivers,
     });
 
-    let tx = Sender {
-        shared: shared.clone(),
-    };
+    let tx = Sender { shared: shared.clone() };
     let rx_iter = std::iter::repeat_n(shared, num_receivers as usize).map(|shared| Receiver {
         shared,
         generation: true,
@@ -81,9 +79,7 @@ impl<M: Sync> Sender<M> {
         let next_gen = !generation;
         // After writing the message, we update the generation and wake the receivers. We use Release here, and Acquire in the receivers,
         // to make sure that writing the message happens-before the receivers read it.
-        shared
-            .futex
-            .store(pack_futex(shared.num_receivers, next_gen), Release);
+        shared.futex.store(pack_futex(shared.num_receivers, next_gen), Release);
         atomic_wait::wake_all(&shared.futex);
 
         // Now we wait until the number of outstanding receivers reaches 0. The receivers all decrement using Release, and we load

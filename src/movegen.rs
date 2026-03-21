@@ -52,15 +52,7 @@ fn generate_placements(dst: &mut Vec<Move>, pos: &Position) {
     }
 }
 
-fn do_spreads(
-    dst: &mut Vec<Move>,
-    sq: Square,
-    dir: Direction,
-    lsb: u16,
-    mut pattern: u16,
-    dist: u32,
-    limit: u16,
-) {
+fn do_spreads(dst: &mut Vec<Move>, sq: Square, dir: Direction, lsb: u16, mut pattern: u16, dist: u32, limit: u16) {
     assert!(dist > 0);
     while pattern < limit {
         dst.push(Move::spread(sq, dir, pattern));
@@ -81,12 +73,7 @@ fn generate_spreads(dst: &mut Vec<Move>, pos: &Position) {
 
         let hits = find_hits(pos.all_blockers(), sq);
 
-        for dir in [
-            Direction::Up,
-            Direction::Down,
-            Direction::Left,
-            Direction::Right,
-        ] {
+        for dir in [Direction::Up, Direction::Down, Direction::Left, Direction::Right] {
             let (mut dist, hit_sq) = hits[dir.idx()];
 
             if dist == 0 {

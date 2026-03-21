@@ -122,8 +122,7 @@ impl CorrectionHistory {
     }
 
     pub fn update(&mut self, pos: &Position, depth: i32, search_score: Score, static_eval: Score) {
-        let bonus =
-            ((search_score - static_eval) * depth / 8).clamp(-Self::MAX_BONUS, Self::MAX_BONUS);
+        let bonus = ((search_score - static_eval) * depth / 8).clamp(-Self::MAX_BONUS, Self::MAX_BONUS);
 
         let tables = &mut self.tables[pos.stm().idx()];
 

@@ -123,15 +123,9 @@ impl TeiHandler {
             DEFAULT_TT_SIZE_MIB, MAX_TT_SIZE_MIB
         );
 
-        println!(
-            "option name Threads type spin default 1 min 1 max {}",
-            MAX_THREADS
-        );
+        println!("option name Threads type spin default 1 min 1 max {}", MAX_THREADS);
 
-        println!(
-            "option name MultiPV type spin default 1 min 1 max {}",
-            MAX_MULTIPV
-        );
+        println!("option name MultiPV type spin default 1 min 1 max {}", MAX_MULTIPV);
 
         println!("option name Minimal type check default false");
 
@@ -261,10 +255,7 @@ impl TeiHandler {
                 self.key_history.clear();
             }
             "tps" => {
-                let count = args
-                    .iter()
-                    .position(|&s| s == "moves")
-                    .unwrap_or(args.len());
+                let count = args.iter().position(|&s| s == "moves").unwrap_or(args.len());
 
                 if count == 0 {
                     eprintln!("Missing TPS");
@@ -428,9 +419,7 @@ impl TeiHandler {
             limits.set_time_manager(our_time, our_inc);
         }
 
-        let max_depth = max_depth
-            .unwrap_or(search::MAX_PLY)
-            .clamp(1, search::MAX_PLY);
+        let max_depth = max_depth.unwrap_or(search::MAX_PLY).clamp(1, search::MAX_PLY);
 
         self.searcher.start_search(
             &self.pos,
@@ -460,10 +449,7 @@ impl TeiHandler {
             Player::P2 => -static_eval,
         };
 
-        println!(
-            "Static eval (P1-relative): {:+.2}",
-            (static_eval as f64) / 100.0
-        );
+        println!("Static eval (P1-relative): {:+.2}", (static_eval as f64) / 100.0);
     }
 
     fn handle_perft(&self, args: &[&str]) {

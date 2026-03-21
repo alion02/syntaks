@@ -102,8 +102,5 @@ pub const fn top_key(pt: PieceType, sq: Square) -> u64 {
 #[must_use]
 pub const fn player_key(height: u8, player: Player, sq: Square) -> u64 {
     assert!((height as usize) < Stacks::MAX_HEIGHT);
-    KEYS[PLAYER_OFFSET
-        + sq.idx() * Stacks::MAX_HEIGHT * Player::COUNT
-        + height as usize * Player::COUNT
-        + player.idx()]
+    KEYS[PLAYER_OFFSET + sq.idx() * Stacks::MAX_HEIGHT * Player::COUNT + height as usize * Player::COUNT + player.idx()]
 }

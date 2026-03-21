@@ -146,14 +146,7 @@ fn static_eval_player(pos: &Position, player: Player, komi: u32) -> Score {
         }
     }
 
-    flats
-        + flats_in_hand
-        + adj_value
-        + line_value
-        + support_score
-        + captive_score
-        + psqt_score
-        + isolated_cap_score
+    flats + flats_in_hand + adj_value + line_value + support_score + captive_score + psqt_score + isolated_cap_score
 }
 
 #[must_use]
@@ -168,8 +161,7 @@ pub fn static_eval(pos: &Position) -> Score {
         .iter()
         .zip([2, 8, -5, -15, -40])
         .map(|(&ring, value)| {
-            (p1_flat_bb & ring).popcount() as i32 * value
-                - (p2_flat_bb & ring).popcount() as i32 * value
+            (p1_flat_bb & ring).popcount() as i32 * value - (p2_flat_bb & ring).popcount() as i32 * value
         })
         .sum::<i32>();
 

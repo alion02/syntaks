@@ -91,8 +91,7 @@ impl Move {
 
     #[must_use]
     pub const fn sq(self) -> Square {
-        Square::from_raw((((self.raw.get()) >> Self::SQUARE_SHIFT) & Self::SQUARE_MASK) as u8)
-            .unwrap()
+        Square::from_raw((((self.raw.get()) >> Self::SQUARE_SHIFT) & Self::SQUARE_MASK) as u8).unwrap()
     }
 
     #[must_use]
@@ -108,8 +107,7 @@ impl Move {
     #[must_use]
     pub const fn pt(self) -> PieceType {
         assert!(!self.is_spread());
-        PieceType::from_raw((((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) - 1) as u8)
-            .unwrap()
+        PieceType::from_raw((((self.raw.get() >> Self::FLAG_SHIFT) & Self::FLAG_MASK) - 1) as u8).unwrap()
     }
 
     #[must_use]

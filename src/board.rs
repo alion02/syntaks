@@ -94,10 +94,7 @@ impl Stacks {
         if self.tops[sq.idx()].is_none() {
             None
         } else {
-            Some(
-                Player::from_raw((self.players[sq.idx()] >> (self.heights[sq.idx()] - 1)) as u8)
-                    .unwrap(),
-            )
+            Some(Player::from_raw((self.players[sq.idx()] >> (self.heights[sq.idx()] - 1)) as u8).unwrap())
         }
     }
 
@@ -133,8 +130,7 @@ impl Stacks {
         debug_assert!(count > 0);
         debug_assert!(count <= 6);
 
-        let players =
-            (self.players[sq.idx()] >> (self.heights[sq.idx()] - count)) & ((1 << count) - 1);
+        let players = (self.players[sq.idx()] >> (self.heights[sq.idx()] - count)) & ((1 << count) - 1);
         let top = self.tops[sq.idx()].unwrap();
 
         self.keys.toggle_top_key(top, sq);
@@ -144,8 +140,7 @@ impl Stacks {
         let new_height = self.heights[sq.idx()];
 
         for height in new_height..old_height {
-            let player =
-                Player::from_raw(((self.players[sq.idx()] >> height) & 0x1) as u8).unwrap();
+            let player = Player::from_raw(((self.players[sq.idx()] >> height) & 0x1) as u8).unwrap();
             self.keys.toggle_player_key(height, player, sq);
         }
 
@@ -157,9 +152,7 @@ impl Stacks {
         } else {
             self.keys.toggle_top_key(PieceType::Flat, sq);
             self.tops[sq.idx()] = Some(PieceType::Flat);
-            let new_top_player =
-                Player::from_raw(((self.players[sq.idx()] >> (new_height - 1)) & 0x1) as u8)
-                    .unwrap();
+            let new_top_player = Player::from_raw(((self.players[sq.idx()] >> (new_height - 1)) & 0x1) as u8).unwrap();
             (players as u8, top, Some(new_top_player))
         }
     }
@@ -341,9 +334,7 @@ impl Position {
 
         if parts.len() >= 3 {
             match parts[2].parse::<u16>() {
-                Ok(fullmove) => {
-                    pos.ply = (fullmove.max(1) - 1) * 2 + if pos.stm == Player::P2 { 1 } else { 0 }
-                }
+                Ok(fullmove) => pos.ply = (fullmove.max(1) - 1) * 2 + if pos.stm == Player::P2 { 1 } else { 0 },
                 Err(_) => return Err(TpsError::InvalidFullmove),
             }
         }
@@ -468,10 +459,7 @@ impl Position {
 
     #[must_use]
     pub fn count_flats(&self) -> FlatCountOutcome {
-        if !(!self.occ()).is_empty()
-            && !self.has_no_more_pieces(Player::P1)
-            && !self.has_no_more_pieces(Player::P2)
-        {
+        if !(!self.occ()).is_empty() && !self.has_no_more_pieces(Player::P1) && !self.has_no_more_pieces(Player::P2) {
             return FlatCountOutcome::None;
         }
 
@@ -492,11 +480,7 @@ impl Position {
                 return false;
             }
 
-            if self
-                .stacks
-                .top_player(mv.sq())
-                .is_none_or(|p| p != self.stm)
-            {
+            if self.stacks.top_player(mv.sq()).is_none_or(|p| p != self.stm) {
                 return false;
             }
 
@@ -589,11 +573,7 @@ impl Position {
 
             for idx in 0..taken {
                 let player = Player::from_raw(players & 0x1).unwrap();
-                let pt = if idx == taken - 1 {
-                    top
-                } else {
-                    PieceType::Flat
-                };
+                let pt = if idx == taken - 1 { top } else { PieceType::Flat };
 
                 new_pos.stacks.push(sq, pt, player);
 
@@ -613,8 +593,8 @@ impl Position {
             debug_assert_eq!(new_player_bbs[0] & new_player_bbs[1], Bitboard::empty());
 
             for player in 0..Player::COUNT {
-                new_pos.players[player] = (new_pos.players[player] | new_player_bbs[player])
-                    & !new_player_bbs[player ^ 0x1];
+                new_pos.players[player] =
+                    (new_pos.players[player] | new_player_bbs[player]) & !new_player_bbs[player ^ 0x1];
             }
 
             new_pos.pieces[top.idx()].set_sq(sq);
@@ -649,11 +629,7 @@ impl Position {
             debug_assert_eq!(self.stacks.top(mv.sq()), None);
             debug_assert!(self.ply() >= 2 || mv.pt() == PieceType::Flat);
 
-            let dropped_player = if self.ply() < 2 {
-                self.stm().flip()
-            } else {
-                self.stm()
-            };
+            let dropped_player = if self.ply() < 2 { self.stm().flip() } else { self.stm() };
 
             new_pos.stacks.push(mv.sq(), mv.pt(), dropped_player);
 
@@ -707,11 +683,7 @@ impl Position {
                 if self.stacks.is_empty(sq) {
                     let mut empty = 1;
 
-                    while file < 5
-                        && self
-                            .stacks
-                            .is_empty(Square::from_file_rank(file + 1, rank).unwrap())
-                    {
+                    while file < 5 && self.stacks.is_empty(Square::from_file_rank(file + 1, rank).unwrap()) {
                         file += 1;
                         empty += 1;
                     }

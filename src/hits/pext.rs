@@ -60,10 +60,7 @@ const SQUARE_DATA: Data = {
         idx += 1;
     }
 
-    Data {
-        squares,
-        table_size,
-    }
+    Data { squares, table_size }
 };
 
 #[static_init::dynamic]

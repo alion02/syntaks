@@ -54,10 +54,7 @@ struct SquareData {
 
 impl SquareData {
     const fn new() -> Self {
-        Self {
-            inv_mask: 0,
-            offset: 0,
-        }
+        Self { inv_mask: 0, offset: 0 }
     }
 }
 
@@ -82,10 +79,7 @@ const SQUARE_DATA: Data = {
         idx += 1;
     }
 
-    Data {
-        squares,
-        table_size,
-    }
+    Data { squares, table_size }
 };
 
 #[static_init::dynamic]

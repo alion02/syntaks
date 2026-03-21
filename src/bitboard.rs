@@ -44,19 +44,12 @@ impl Bitboard {
 
     #[must_use]
     pub const fn from_raw(raw: u64) -> Self {
-        Self {
-            raw: raw & Self::MASK,
-        }
+        Self { raw: raw & Self::MASK }
     }
 
     #[must_use]
     pub const fn edge(dir: Direction) -> Self {
-        [
-            Self::UPPER_EDGE,
-            Self::LOWER_EDGE,
-            Self::LEFT_EDGE,
-            Self::RIGHT_EDGE,
-        ][dir.idx()]
+        [Self::UPPER_EDGE, Self::LOWER_EDGE, Self::LEFT_EDGE, Self::RIGHT_EDGE][dir.idx()]
     }
 
     #[must_use]
@@ -137,9 +130,7 @@ impl Bitboard {
 
     #[must_use]
     pub const fn shr(self, count: u32) -> Self {
-        Self {
-            raw: self.raw >> count,
-        }
+        Self { raw: self.raw >> count }
     }
 
     #[must_use]

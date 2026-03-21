@@ -214,11 +214,7 @@ fn search<NT: NodeType>(
         }
 
         // nullmove pruning (nmp)
-        if expected_cutnode
-            && depth >= 4
-            && static_eval >= beta
-            && thread.stack[ply as usize - 1].mv.is_some()
-        {
+        if expected_cutnode && depth >= 4 && static_eval >= beta && thread.stack[ply as usize - 1].mv.is_some() {
             let r = 3 + depth / 4;
 
             let new_pos = thread.apply_nullmove(ply, pos);
@@ -291,8 +287,7 @@ fn search<NT: NodeType>(
         let new_pos = thread.apply_move(ply, pos, mv);
         thread.shared().tt.prefetch(new_pos.key());
 
-        let is_crush =
-            mv.is_spread() && pos.stacks().top(mv.spread_dest()) == Some(PieceType::Wall);
+        let is_crush = mv.is_spread() && pos.stacks().top(mv.spread_dest()) == Some(PieceType::Wall);
 
         if is_crush {
             extension += 1;
@@ -344,16 +339,7 @@ fn search<NT: NodeType>(
 
                 let reduced = (new_depth - r).max(1).min(new_depth - 1);
 
-                score = -search::<NonPvNode>(
-                    thread,
-                    child_data,
-                    &new_pos,
-                    reduced,
-                    ply + 1,
-                    -alpha - 1,
-                    -alpha,
-                    true,
-                );
+                score = -search::<NonPvNode>(thread, child_data, &new_pos, reduced, ply + 1, -alpha - 1, -alpha, true);
 
                 if score > alpha && reduced < new_depth {
                     score = -search::<NonPvNode>(
@@ -381,16 +367,7 @@ fn search<NT: NodeType>(
             }
 
             if NT::PV_NODE && (move_count == 1 || score > alpha) {
-                score = -search::<PvNode>(
-                    thread,
-                    child_data,
-                    &new_pos,
-                    new_depth,
-                    ply + 1,
-                    -beta,
-                    -alpha,
-                    false,
-                );
+                score = -search::<PvNode>(thread, child_data, &new_pos, new_depth, ply + 1, -beta, -alpha, false);
             }
 
             score
@@ -576,10 +553,9 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
                 if last_pv
                     && !thread.shared().has_stopped()
                     && (thread.root_depth >= ctx.max_depth
-                        || thread.shared().check_stop_soft(
-                            thread.nodes(),
-                            thread.pv_move().nodes as f64 / (thread.nodes() as f64),
-                        ))
+                        || thread
+                            .shared()
+                            .check_stop_soft(thread.nodes(), thread.pv_move().nodes as f64 / (thread.nodes() as f64)))
                 {
                     thread.shared().stop();
                 }
@@ -588,12 +564,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
                     || (!thread.shared().options.minimal
                         && (last_pv || thread.shared().elapsed() >= VERBOSE_MULTIPV_DELAY))
                 {
-                    report(
-                        thread,
-                        thread.root_depth,
-                        thread.shared().elapsed(),
-                        ctx.multipv,
-                    );
+                    report(thread, thread.root_depth, thread.shared().elapsed(), ctx.multipv);
                 }
             }
 
@@ -816,9 +787,7 @@ impl Searcher {
         self.stop();
         if !self.threads.is_empty() {
             self.sender.send(ThreadCommand::Quit);
-            self.threads
-                .drain(..)
-                .for_each(|thread| thread.join().unwrap());
+            self.threads.drain(..).for_each(|thread| thread.join().unwrap());
         }
     }
 

@@ -175,15 +175,7 @@ impl TranspositionTable {
         (true, probed)
     }
 
-    pub fn store(
-        &self,
-        key: u64,
-        score: Score,
-        mv: Option<Move>,
-        depth: i32,
-        ply: i32,
-        flag: TtFlag,
-    ) {
+    pub fn store(&self, key: u64, score: Score, mv: Option<Move>, depth: i32, ply: i32, flag: TtFlag) {
         let idx = self.calc_index(key);
         let entry_key = pack_entry_key(key);
 
