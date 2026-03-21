@@ -21,6 +21,7 @@
  * SOFTWARE.
  */
 
+use crate::board::FlatCountOutcome;
 use crate::limit::Limits;
 use crate::tei::TeiOptions;
 use crate::ttable::{DEFAULT_TT_SIZE_MIB, TranspositionTable};
@@ -221,6 +222,12 @@ pub struct StackEntry {
     pub mv: Option<Move>,
 }
 
+pub enum TerminalState {
+    Win,
+    Draw,
+    Loss,
+}
+
 pub struct ThreadData {
     pub id: u32,
     pub key_history: Vec<u64>,
@@ -307,7 +314,7 @@ impl ThreadData {
         self.key_history.pop();
     }
 
-    pub fn is_drawn_by_repetition(&self, curr: u64, ply: i32) -> bool {
+    fn is_drawn_by_repetition(&self, curr: u64, ply: i32) -> bool {
         let mut ply = ply - 1;
         let mut repetitions = 0;
 
@@ -326,6 +333,36 @@ impl ThreadData {
         }
 
         false
+    }
+
+    pub fn check_terminal_state(&self, ply: i32, pos: &Position, mv: Move) -> Option<TerminalState> {
+        if pos.has_road(pos.stm()) {
+            return Some(TerminalState::Win);
+        }
+
+        if mv.is_spread() && pos.has_road(pos.stm().flip()) {
+            return Some(TerminalState::Loss);
+        }
+
+        if !mv.is_spread() {
+            match pos.count_flats() {
+                FlatCountOutcome::None => {}
+                FlatCountOutcome::Draw => return Some(TerminalState::Draw),
+                FlatCountOutcome::Win(player) => {
+                    return if player == pos.stm() {
+                        Some(TerminalState::Win)
+                    } else {
+                        Some(TerminalState::Loss)
+                    };
+                }
+            }
+        }
+
+        if mv.is_spread() && self.is_drawn_by_repetition(pos.key(), ply) {
+            return Some(TerminalState::Draw);
+        }
+
+        None
     }
 
     #[must_use]

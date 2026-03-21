@@ -29,7 +29,7 @@ use crate::movegen::generate_moves;
 use crate::movepick::Movepicker;
 use crate::takmove::Move;
 use crate::tei::TeiOptions;
-use crate::thread::{PvList, RootMove, SharedContext, ThreadData, update_pv};
+use crate::thread::{PvList, RootMove, SharedContext, TerminalState, ThreadData, update_pv};
 use crate::ttable::TtFlag;
 use crate::util::command_channel::{Receiver, Sender, channel};
 use std::sync::Arc;
@@ -295,39 +295,20 @@ fn search<NT: NodeType>(
 
         let nodes_before = thread.nodes();
 
-        let score = 'recurse: {
-            if new_pos.has_road(pos.stm()) {
-                break 'recurse SCORE_MATE - ply - 1;
+        let score = if let Some(state) = thread.check_terminal_state(ply, &new_pos, mv) {
+            match state {
+                TerminalState::Win => SCORE_MATE - ply - 1,
+                TerminalState::Draw => 0,
+                TerminalState::Loss => -SCORE_MATE + ply + 1,
             }
-
-            if mv.is_spread() && new_pos.has_road(pos.stm().flip()) {
-                break 'recurse -SCORE_MATE + ply + 1;
-            }
-
-            if !mv.is_spread() {
-                match new_pos.count_flats() {
-                    FlatCountOutcome::None => {}
-                    FlatCountOutcome::Draw => break 'recurse 0,
-                    FlatCountOutcome::Win(player) => {
-                        break 'recurse if player == pos.stm() {
-                            SCORE_MATE - ply - 1
-                        } else {
-                            -SCORE_MATE + ply + 1
-                        };
-                    }
-                }
-            }
-
-            if mv.is_spread() && thread.is_drawn_by_repetition(new_pos.key(), ply) {
-                break 'recurse 0;
-            }
-
+        } else {
             let mut score = 0;
 
             let new_depth = depth + extension - 1;
 
             if depth >= 2 && move_count >= 5 + 2 * usize::from(NT::ROOT_NODE) {
                 let mut r = LMR_REDUCTIONS[depth as usize - 1][move_count.min(LMR_TABLE_MOVES) - 1];
+
                 if mv.is_spread() {
                     let gain = new_pos.fcd(pos.stm()) - pos.fcd(pos.stm());
                     r += (1 - gain).clamp(0, 3) * 1024;
