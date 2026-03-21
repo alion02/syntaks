@@ -22,6 +22,7 @@
  */
 
 use crate::limit::Limits;
+use crate::tei::TeiOptions;
 use crate::ttable::{DEFAULT_TT_SIZE_MIB, TranspositionTable};
 use crate::util::counter::Counter;
 use crate::{
@@ -90,6 +91,7 @@ impl SearcherCount {
 
 pub struct SharedContext {
     pub tt: TranspositionTable,
+    pub options: TeiOptions,
     start_time: Instant,
     limits: Limits,
     stopped: AtomicBool,
@@ -102,6 +104,7 @@ impl SharedContext {
         let time = Instant::now();
         Self {
             tt: TranspositionTable::new(DEFAULT_TT_SIZE_MIB),
+            options: Default::default(),
             start_time: time,
             limits: Limits::new(time),
             stopped: AtomicBool::new(false),
@@ -114,7 +117,8 @@ impl SharedContext {
         self.nodes.resize(threads as usize);
     }
 
-    pub fn init_search(&mut self, start_time: Instant, limits: Limits) {
+    pub fn init_search(&mut self, options: &TeiOptions, start_time: Instant, limits: Limits) {
+        self.options = *options;
         self.start_time = start_time;
         self.limits = limits;
         self.stopped.store(false, Ordering::Relaxed);

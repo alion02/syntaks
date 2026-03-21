@@ -40,11 +40,15 @@ pub const MAX_MULTIPV: usize = 2048;
 #[derive(Copy, Clone, Debug)]
 pub struct TeiOptions {
     pub multipv: usize,
+    pub minimal: bool,
 }
 
 impl Default for TeiOptions {
     fn default() -> Self {
-        Self { multipv: 1 }
+        Self {
+            multipv: 1,
+            minimal: false,
+        }
     }
 }
 
@@ -128,6 +132,8 @@ impl TeiHandler {
             "option name MultiPV type spin default 1 min 1 max {}",
             MAX_MULTIPV
         );
+
+        println!("option name Minimal type check default false");
 
         println!("teiok");
     }
@@ -220,6 +226,11 @@ impl TeiHandler {
                 if let Ok(multipv) = value.parse::<usize>() {
                     let multipv = multipv.clamp(1, MAX_MULTIPV);
                     self.options.multipv = multipv;
+                }
+            }
+            "minimal" => {
+                if let Ok(minimal) = value.parse::<bool>() {
+                    self.options.minimal = minimal;
                 }
             }
             unknown => eprintln!("Unknown option '{}'", unknown),

@@ -544,7 +544,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
                     break;
                 }
 
-                if thread.is_main_thread() && ctx.multipv == 1 {
+                if thread.is_main_thread() && !thread.shared().options.minimal && ctx.multipv == 1 {
                     let time = thread.shared().elapsed();
                     if time >= WIDEN_REPORT_DELAY {
                         report_single(thread, thread.root_depth, time, ctx.multipv, thread.pv_idx);
@@ -575,9 +575,9 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
                     thread.shared().stop();
                 }
 
-                if last_pv
-                    || thread.shared().has_stopped()
-                    || thread.shared().elapsed() >= VERBOSE_MULTIPV_DELAY
+                if thread.shared().has_stopped()
+                    || (!thread.shared().options.minimal
+                        && (last_pv || thread.shared().elapsed() >= VERBOSE_MULTIPV_DELAY))
                 {
                     report(
                         thread,
@@ -763,7 +763,7 @@ impl Searcher {
         options: &TeiOptions,
     ) {
         self.modify_shared_ctx(|ctx| {
-            ctx.init_search(start_time, limits);
+            ctx.init_search(options, start_time, limits);
         });
 
         self.init_root_moves(pos);
