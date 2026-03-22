@@ -37,7 +37,8 @@ impl CounterShard {
     }
 
     fn increment(&self) {
-        self.value.fetch_add(1, Ordering::Relaxed);
+        let count = self.value.load(Ordering::Relaxed);
+        self.value.store(count + 1, Ordering::Relaxed);
     }
 
     #[must_use]
@@ -50,13 +51,13 @@ impl CounterShard {
     }
 }
 
-pub struct Counter {
+pub struct NodeCounter {
     counters: Box<[CounterShard]>,
 }
 
-unsafe impl Sync for Counter {}
+unsafe impl Sync for NodeCounter {}
 
-impl Counter {
+impl NodeCounter {
     #[must_use]
     pub fn new(count: usize) -> Self {
         Self {

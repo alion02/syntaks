@@ -23,9 +23,9 @@
 
 use crate::board::FlatCountOutcome;
 use crate::limit::Limits;
+use crate::node_counter::NodeCounter;
 use crate::tei::TeiOptions;
 use crate::ttable::{DEFAULT_TT_SIZE_MIB, TranspositionTable};
-use crate::util::counter::Counter;
 use crate::{
     board::Position,
     correction::CorrectionHistory,
@@ -97,7 +97,7 @@ pub struct SharedContext {
     limits: Limits,
     stopped: AtomicBool,
     counter: Arc<SearcherCount>,
-    nodes: Counter,
+    nodes: NodeCounter,
 }
 
 impl SharedContext {
@@ -110,7 +110,7 @@ impl SharedContext {
             limits: Limits::new(time),
             stopped: AtomicBool::new(false),
             counter: Arc::new(SearcherCount::new()),
-            nodes: Counter::new(1),
+            nodes: NodeCounter::new(1),
         }
     }
 

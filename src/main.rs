@@ -32,6 +32,7 @@ mod keys;
 mod limit;
 mod movegen;
 mod movepick;
+mod node_counter;
 mod perft;
 mod road;
 mod search;

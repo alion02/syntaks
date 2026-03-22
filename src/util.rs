@@ -22,4 +22,3 @@
  */
 
 pub mod command_channel;
-pub mod counter;
