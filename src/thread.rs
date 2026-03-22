@@ -335,21 +335,22 @@ impl ThreadData {
         false
     }
 
-    pub fn check_terminal_state(&self, ply: i32, pos: &Position, mv: Move) -> Option<TerminalState> {
-        if pos.has_road(pos.stm()) {
+    // note: `pos` is the position *after* `prev_move`
+    pub fn check_terminal_state(&self, ply: i32, pos: &Position, prev_move: Move) -> Option<TerminalState> {
+        if pos.has_road(pos.stm().flip()) {
             return Some(TerminalState::Win);
         }
 
-        if mv.is_spread() && pos.has_road(pos.stm().flip()) {
+        if prev_move.is_spread() && pos.has_road(pos.stm()) {
             return Some(TerminalState::Loss);
         }
 
-        if !mv.is_spread() {
+        if !prev_move.is_spread() {
             match pos.count_flats() {
                 FlatCountOutcome::None => {}
                 FlatCountOutcome::Draw => return Some(TerminalState::Draw),
                 FlatCountOutcome::Win(player) => {
-                    return if player == pos.stm() {
+                    return if player == pos.stm().flip() {
                         Some(TerminalState::Win)
                     } else {
                         Some(TerminalState::Loss)
@@ -358,7 +359,7 @@ impl ThreadData {
             }
         }
 
-        if mv.is_spread() && self.is_drawn_by_repetition(pos.key(), ply) {
+        if prev_move.is_spread() && self.is_drawn_by_repetition(pos.key(), ply) {
             return Some(TerminalState::Draw);
         }
 
