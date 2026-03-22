@@ -577,7 +577,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
     }
 }
 
-fn report_single(thread: &ThreadData, depth: i32, time: f64, multipv: usize, pv_idx: usize) {
+fn report_single(thread: &ThreadData, depth: i32, time: f64, multipv: usize, pv_idx: usize) -> bool {
     let root_move = &thread.root_moves[pv_idx];
 
     let (depth, score) = if root_move.score == -SCORE_INF {
@@ -585,6 +585,11 @@ fn report_single(thread: &ThreadData, depth: i32, time: f64, multipv: usize, pv_
     } else {
         (depth, root_move.display_score)
     };
+
+    if score == -SCORE_INF {
+        // search stopped at d1 before pv_idx+1 moves were searched
+        return false;
+    }
 
     assert_ne!(depth, 0);
     assert_ne!(score, -SCORE_INF);
@@ -638,11 +643,15 @@ fn report_single(thread: &ThreadData, depth: i32, time: f64, multipv: usize, pv_
     }
 
     println!();
+
+    true
 }
 
 fn report(thread: &ThreadData, depth: i32, time: f64, multipv: usize) {
     for pv_idx in 0..multipv {
-        report_single(thread, depth, time, multipv, pv_idx);
+        if !report_single(thread, depth, time, multipv, pv_idx) {
+            break;
+        }
     }
 }
 
