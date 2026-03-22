@@ -21,7 +21,7 @@
  * SOFTWARE.
  */
 
-use crate::board::{FlatCountOutcome, Position};
+use crate::board::Position;
 use crate::core::PieceType;
 use crate::eval::static_eval;
 use crate::limit::Limits;

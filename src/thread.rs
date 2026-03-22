@@ -337,25 +337,26 @@ impl ThreadData {
 
     // note: `pos` is the position *after* `prev_move`
     pub fn check_terminal_state(&self, ply: i32, pos: &Position, prev_move: Move) -> Option<TerminalState> {
-        if pos.has_road(pos.stm().flip()) {
+        // player we care about: the one that made the move
+        let stm = pos.stm().flip();
+
+        if pos.has_road(stm) {
             return Some(TerminalState::Win);
         }
 
-        if prev_move.is_spread() && pos.has_road(pos.stm()) {
+        if prev_move.is_spread() && pos.has_road(stm.flip()) {
             return Some(TerminalState::Loss);
         }
 
-        if !prev_move.is_spread() {
-            match pos.count_flats() {
-                FlatCountOutcome::None => {}
-                FlatCountOutcome::Draw => return Some(TerminalState::Draw),
-                FlatCountOutcome::Win(player) => {
-                    return if player == pos.stm().flip() {
-                        Some(TerminalState::Win)
-                    } else {
-                        Some(TerminalState::Loss)
-                    };
-                }
+        match pos.count_flats() {
+            FlatCountOutcome::None => {}
+            FlatCountOutcome::Draw => return Some(TerminalState::Draw),
+            FlatCountOutcome::Win(player) => {
+                return if player == stm {
+                    Some(TerminalState::Win)
+                } else {
+                    Some(TerminalState::Loss)
+                };
             }
         }
 
