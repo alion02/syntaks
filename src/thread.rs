@@ -31,7 +31,7 @@ use crate::{
     correction::CorrectionHistory,
     history::History,
     movepick::KillerTable,
-    search::{MAX_PLY, SCORE_INF, Score},
+    search::{MAX_DEPTH, SCORE_INF, Score},
     takmove::Move,
 };
 use std::sync::Arc;
@@ -173,7 +173,7 @@ impl SharedContext {
     }
 }
 
-pub type PvList = arrayvec::ArrayVec<Move, { MAX_PLY as usize }>;
+pub type PvList = arrayvec::ArrayVec<Move, { MAX_DEPTH as usize }>;
 
 pub fn update_pv(pv: &mut PvList, mv: Move, child: &PvList) {
     pv.clear();
@@ -239,7 +239,7 @@ pub struct ThreadData {
     pub stack: Vec<StackEntry>,
     pub corrhist: Box<CorrectionHistory>,
     pub history: Box<History>,
-    pub killers: [KillerTable; MAX_PLY as usize],
+    pub killers: [KillerTable; MAX_DEPTH as usize],
     pub shared: Option<Arc<SharedContext>>,
 }
 
@@ -252,10 +252,10 @@ impl ThreadData {
             seldepth: 0,
             pv_idx: 0,
             root_moves: Vec::with_capacity(1024),
-            stack: vec![StackEntry::default(); MAX_PLY as usize + 1],
+            stack: vec![StackEntry::default(); MAX_DEPTH as usize + 1],
             corrhist: CorrectionHistory::boxed(),
             history: History::boxed(),
-            killers: [Default::default(); MAX_PLY as usize],
+            killers: [Default::default(); MAX_DEPTH as usize],
             shared: None,
         }
     }

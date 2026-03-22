@@ -46,7 +46,8 @@ pub const SCORE_MATE: Score = SCORE_INF - 1;
 pub const SCORE_WIN: Score = 25000;
 pub const SCORE_MAX_MATE: Score = SCORE_MATE - MAX_PLY as Score;
 
-pub const MAX_PLY: i32 = 255;
+pub const MAX_DEPTH: i32 = 255;
+pub const MAX_PLY: i32 = MAX_DEPTH + 1;
 
 const WIDEN_REPORT_DELAY: f64 = 1.0;
 const VERBOSE_MULTIPV_DELAY: f64 = 1.0;
@@ -81,13 +82,13 @@ impl SearchContext {
 const LMR_TABLE_MOVES: usize = 64;
 
 #[static_init::dynamic]
-static LMR_REDUCTIONS: [[i32; LMR_TABLE_MOVES]; MAX_PLY as usize] = {
+static LMR_REDUCTIONS: [[i32; LMR_TABLE_MOVES]; MAX_DEPTH as usize] = {
     const BASE: f64 = 0.5;
     const DIVISOR: f64 = 2.5;
 
-    let mut reductions = [[0; LMR_TABLE_MOVES]; MAX_PLY as usize];
+    let mut reductions = [[0; LMR_TABLE_MOVES]; MAX_DEPTH as usize];
 
-    for depth in 1..MAX_PLY as usize {
+    for depth in 1..MAX_DEPTH as usize {
         let ln_depth = (depth as f64).ln();
         for move_number in 1..LMR_TABLE_MOVES {
             let ln_move_number = (move_number as f64).ln();
@@ -181,6 +182,14 @@ fn search<NT: NodeType>(
     if NT::PV_NODE {
         thread.update_seldepth(ply);
     }
+
+    if ply > MAX_DEPTH {
+        let static_eval = static_eval(pos);
+        let correction = thread.corrhist.correction(pos);
+        return static_eval + correction;
+    }
+
+    let depth = depth.min(MAX_DEPTH);
 
     let (_tt_hit, tt_entry) = thread.shared().tt.probe(pos.key(), ply);
 
@@ -469,7 +478,7 @@ fn run_search(shared: Arc<SharedContext>, ctx: &SearchContext, thread: &mut Thre
 
     counter.register_thread();
 
-    let mut data_stack = vec![PlyData::new(); MAX_PLY as usize * 2];
+    let mut data_stack = vec![PlyData::new(); MAX_DEPTH as usize * 2];
 
     thread.root_depth = 1;
 
@@ -744,7 +753,7 @@ impl Searcher {
             let key_history = Arc::get_mut(&mut self.key_history).unwrap();
 
             key_history.clear();
-            key_history.reserve(new_key_history.len() + MAX_PLY as usize);
+            key_history.reserve(new_key_history.len() + MAX_DEPTH as usize);
 
             key_history.extend_from_slice(new_key_history);
         }

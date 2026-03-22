@@ -445,7 +445,7 @@ impl TeiHandler {
             limits.set_time_manager(our_time, our_inc);
         }
 
-        let max_depth = max_depth.unwrap_or(search::MAX_PLY).clamp(1, search::MAX_PLY);
+        let max_depth = max_depth.unwrap_or(search::MAX_DEPTH).clamp(1, search::MAX_DEPTH);
 
         self.searcher.start_search(
             &self.pos,
