@@ -617,14 +617,11 @@ fn report_single(thread: &ThreadData, depth: i32, time: f64, nodes: usize, multi
     );
 
     if score.abs() > SCORE_WIN {
-        print!(
-            "mate {}",
-            if score > 0 {
-                (SCORE_MATE - score + 1) / 2
-            } else {
-                -(SCORE_MATE + score) / 2
-            }
-        );
+        if score > 0 {
+            print!("mate {}", (SCORE_MATE - score + 1) / 2);
+        } else {
+            print!("mate {}", -(SCORE_MATE + score) / 2);
+        }
     } else {
         print!("cp {}", score);
     }
@@ -637,6 +634,25 @@ fn report_single(thread: &ThreadData, depth: i32, time: f64, nodes: usize, multi
     if root_move.lower_bound {
         assert!(!root_move.upper_bound);
         print!(" lowerbound");
+    }
+
+    if score.abs() > SCORE_WIN {
+        if score > 0 {
+            print!(" wdl 1000 0 0");
+        } else {
+            print!(" wdl 0 0 1000");
+        }
+    } else {
+        let p = |cp: Score| {
+            let x = (-cp as f64 + 40.0) / 267.0;
+            (1000.0 / (1.0 + x.exp())).round() as i32
+        };
+
+        let w = p(score);
+        let l = p(-score);
+        let d = 1000 - w - l;
+
+        print!(" wdl {} {} {}", w, d, l);
     }
 
     let hashfull = thread.shared().tt.estimate_full_permille();
