@@ -345,11 +345,11 @@ impl ThreadData {
         // player we care about: the one that made the move
         let stm = pos.stm().flip();
 
-        if pos.has_road(stm) {
+        if pos.influence(stm).0 {
             return Some(TerminalState::Win);
         }
 
-        if prev_move.is_spread() && pos.has_road(stm.flip()) {
+        if prev_move.is_spread() && pos.influence(stm.flip()).0 {
             return Some(TerminalState::Loss);
         }
 

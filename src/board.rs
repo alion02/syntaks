@@ -25,7 +25,7 @@ use crate::bitboard::Bitboard;
 use crate::core::*;
 use crate::hits::find_hit_for_dir;
 use crate::keys;
-use crate::road::has_road;
+use crate::road::influence;
 use crate::takmove::Move;
 use std::cmp::Ordering;
 use std::str::FromStr;
@@ -453,8 +453,8 @@ impl Position {
     }
 
     #[must_use]
-    pub fn has_road(&self, player: Player) -> bool {
-        has_road(self.roads(player))
+    pub fn influence(&self, player: Player) -> (bool, [Bitboard; 4]) {
+        influence(self.roads(player))
     }
 
     #[must_use]
