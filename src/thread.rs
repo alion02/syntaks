@@ -349,7 +349,10 @@ impl ThreadData {
             return Some(TerminalState::Win);
         }
 
-        if prev_move.is_spread() && pos.influence(stm.flip()).0 {
+        // todo: cache in position and update only if prev_move is spread
+        let (road_loss, nstm_infl) = pos.influence(stm.flip());
+
+        if road_loss {
             return Some(TerminalState::Loss);
         }
 
@@ -367,6 +370,13 @@ impl ThreadData {
 
         if prev_move.is_spread() && self.is_drawn_by_repetition(pos.key(), ply) {
             return Some(TerminalState::Draw);
+        }
+
+        let criticals = (nstm_infl[0] & nstm_infl[1]) | (nstm_infl[2] & nstm_infl[3]);
+        let open_criticals = criticals & !pos.occ();
+
+        if !open_criticals.is_empty() {
+            return Some(TerminalState::Loss);
         }
 
         None
