@@ -61,7 +61,7 @@ pub static STACK_INPUT_INDICES: [usize; STACK_INPUT_CHUNKS.len() + 1] = {
     }
     indices
 };
-pub const STACK_INPUT_SIZE: usize = STACK_INPUT_INDICES[5];
+pub const STACK_INPUT_SIZE: usize = *STACK_INPUT_INDICES.last().unwrap();
 
 pub const L1_SIZE: usize = 512;
 
