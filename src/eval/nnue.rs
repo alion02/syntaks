@@ -144,8 +144,7 @@ pub(super) fn stack_feature_idx(perspective: Player, top: Piece, sq: Square, chu
     debug_assert!(chunk.idx < STACK_INPUT_CHUNKS.len() as u8);
     debug_assert!(chunk.bits >= 0b10);
     let top_idx = top_feature_idx(perspective, top.player(), top.piece_type(), sq);
-    let content = (((chunk.bits.isolate_highest_one() - 1) * perspective.idx() as u8) ^ chunk.bits) - 2;
-    top_idx + TOP_INPUT_SIZE * content as usize + STACK_INPUT_INDICES[chunk.idx as usize]
+    top_idx + TOP_INPUT_SIZE * (chunk.bits as usize - 2) + STACK_INPUT_INDICES[chunk.idx as usize]
 }
 
 #[derive(Clone, Debug, Default)]
