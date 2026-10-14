@@ -46,7 +46,22 @@ cfg_select! {
 }
 
 pub const TOP_INPUT_SIZE: usize = Player::COUNT * PieceType::COUNT * Square::COUNT;
-pub const STACK_INPUT_SIZE: usize = 12 * Player::COUNT * PieceType::COUNT * Square::COUNT * Player::COUNT;
+
+pub static STACK_INPUT_CHUNKS: [u32; 5] = [3, 3, 2, 2, 1];
+pub static STACK_INPUT_INDICES: [usize; STACK_INPUT_CHUNKS.len() + 1] = {
+    let mut indices = [0; _];
+    let mut idx = 0;
+    let mut i = 1;
+    while i < indices.len() {
+        let chunk_size = STACK_INPUT_CHUNKS[i - 1];
+        assert!(chunk_size < u8::BITS - 1, "chunk bits should fit inside struct Chunk");
+        idx += (Player::COUNT.pow(chunk_size + 1) - 2) * TOP_INPUT_SIZE;
+        indices[i] = idx;
+        i += 1;
+    }
+    indices
+};
+pub const STACK_INPUT_SIZE: usize = STACK_INPUT_INDICES[5];
 
 pub const L1_SIZE: usize = 512;
 
@@ -57,6 +72,51 @@ pub const L1_Q: i32 = 64;
 
 pub const SCALE: i32 = 400;
 
+pub struct Chunk {
+    pub idx: u8,
+    pub bits: u8,
+}
+
+pub struct StackChunks {
+    depth_left: u8,
+    idx: u8,
+    bits: u32,
+}
+
+impl StackChunks {
+    #[must_use]
+    pub fn new(perspective: Player, height: u8, players: u64) -> Option<Self> {
+        if height < 2 {
+            return None;
+        }
+        Some(Self {
+            depth_left: height.min(13) - 1,
+            idx: 0,
+            bits: (perspective.idx() as u32 * !0) ^ (players as u32 >> 1),
+        })
+    }
+}
+
+impl Iterator for StackChunks {
+    type Item = Chunk;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.depth_left == 0 {
+            return None;
+        }
+        let count = (self.depth_left).min(STACK_INPUT_CHUNKS[self.idx as usize] as u8);
+        let top_bit = 1 << count;
+        let chunk = Chunk {
+            idx: self.idx,
+            bits: top_bit | ((top_bit - 1) & self.bits as u8),
+        };
+        self.depth_left -= count;
+        self.bits >>= count;
+        self.idx += 1;
+        Some(chunk)
+    }
+}
+
 #[repr(C, align(64))]
 pub(super) struct Network {
     pub ftw_top: [[i16; L1_SIZE]; TOP_INPUT_SIZE],
@@ -66,7 +126,8 @@ pub(super) struct Network {
     pub l1b: [i16; OUTPUT_BUCKETS],
 }
 
-pub(super) static NET: Network = unsafe { std::mem::transmute(*include_bytes!(env!("EVALFILE"))) };
+// pub(super) static NET: Network = unsafe { std::mem::transmute(*include_bytes!(env!("EVALFILE"))) };
+pub(super) static NET: Network = unsafe { std::mem::transmute([0u8; size_of::<Network>()]) }; // TODO: temporary
 
 #[must_use]
 pub(super) fn evaluate_once(pos: &Position) -> i32 {
@@ -79,10 +140,12 @@ pub(super) fn top_feature_idx(perspective: Player, side: Player, pt: PieceType, 
     (usize::from(side != perspective) * PieceType::COUNT + pt.idx()) * Square::COUNT + sq.idx()
 }
 
-pub(super) fn stack_feature_idx(perspective: Player, top: Piece, side: Player, depth: u8, sq: Square) -> usize {
-    debug_assert!(depth < 12);
-    let top_idx = usize::from(top.player() != perspective) * PieceType::COUNT + top.piece_type().idx();
-    ((top_idx * Player::COUNT + usize::from(side != perspective)) * Square::COUNT + sq.idx()) * 12 + depth as usize
+pub(super) fn stack_feature_idx(perspective: Player, top: Piece, sq: Square, chunk: Chunk) -> usize {
+    debug_assert!(chunk.idx < STACK_INPUT_CHUNKS.len() as u8);
+    debug_assert!(chunk.bits >= 0b10);
+    let top_idx = top_feature_idx(perspective, top.player(), top.piece_type(), sq);
+    let content = (((chunk.bits.isolate_highest_one() - 1) * perspective.idx() as u8) ^ chunk.bits) - 2;
+    top_idx + TOP_INPUT_SIZE * content as usize + STACK_INPUT_INDICES[chunk.idx as usize]
 }
 
 #[derive(Clone, Debug, Default)]

@@ -67,11 +67,9 @@ impl Accumulator {
         };
 
         for sq in pos.occ() {
-            let height = stacks.height(sq);
-
-            if height == 1 {
+            let Some(chunks) = StackChunks::new(player, stacks.height(sq), stacks.players(sq)) else {
                 continue;
-            }
+            };
 
             let top = pos
                 .stacks()
@@ -80,14 +78,9 @@ impl Accumulator {
                 .unwrap();
             let perspective_sq = sq.transform(transform);
 
-            let mut players = stacks.players(sq) >> 1;
-            let count = height.min(13) - 1;
-
-            for depth in 0..count {
-                let color = Player::from_raw((players & 0x1) as u8).unwrap();
-                let feature = stack_feature_idx(player, top, color, depth, perspective_sq);
+            for chunk in chunks {
+                let feature = stack_feature_idx(player, top, perspective_sq, chunk);
                 activate_stack(feature);
-                players >>= 1;
             }
         }
 
