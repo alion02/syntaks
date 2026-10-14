@@ -47,7 +47,7 @@ cfg_select! {
 
 pub const TOP_INPUT_SIZE: usize = Player::COUNT * PieceType::COUNT * Square::COUNT;
 
-pub static STACK_INPUT_CHUNKS: [u32; 5] = [3, 3, 2, 2, 1];
+pub static STACK_INPUT_CHUNKS: [u32; 6] = [3, 3, 2, 2, 1, 1];
 pub static STACK_INPUT_INDICES: [usize; STACK_INPUT_CHUNKS.len() + 1] = {
     let mut indices = [0; _];
     let mut idx = 0;
